@@ -43,11 +43,8 @@ class AppServiceProvider extends ServiceProvider
                 if (!$user) {
                     return ['permissions' => null];
                 }
-                $member = Member::where('user_id', $user->id)->with('permission')->first();
-                $permissions=$member->permission;
-
                 return [
-                    'permissions' => $permissions,
+                    'permissions' => $member?->permission,
                 ];
             }
         ]);
