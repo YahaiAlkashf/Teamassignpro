@@ -17,9 +17,8 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->string('role')->default('admin');
-            $table->enum('system_type',['retail','services','education','realEstate','delivery','travels','clubs','gym','hotel','manager']);
-            $table->string('country');
+            $table->string('role')->default('users');
+            $table->string('country')->nullable();
             $table->json('access')->nullable();
             $table->string('subscription')->nullable();
             $table->timestamp('subscription_expires_at')->nullable();

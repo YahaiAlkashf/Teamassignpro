@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
+use App\Models\Member; 
+use App\Models\MemberPermission;
 use Inertia\Inertia;
 
 class AppServiceProvider extends ServiceProvider
@@ -34,7 +36,18 @@ class AppServiceProvider extends ServiceProvider
 
                 return [
                     'user' => $user,
-                    'system_type' => $user ? $user->system_type : null
+                ];
+            },
+            'permissions' => function () {
+                $user = Auth::user();
+                if (!$user) {
+                    return ['permissions' => null];
+                }
+                $member = Member::where('user_id', $user->id)->with('permission')->first();
+                $permissions=$member->permission;
+
+                return [
+                    'permissions' => $permissions,
                 ];
             }
         ]);

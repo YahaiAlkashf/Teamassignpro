@@ -15,47 +15,30 @@ class VerifyEmailController extends Controller
      */
     public function __invoke(EmailVerificationRequest $request): RedirectResponse
     {
-        // تأكد من تسجيل دخول المستخدم
         if (!Auth::check()) {
             Auth::login($request->user());
         }
 
-        // تحقق من البريد الإلكتروني أولاً
         if ($request->user()->markEmailAsVerified()) {
             event(new Verified($request->user()));
         }
 
-        // ثم قم بالتوجيه بناءً على نوع المستخدم
         return $this->redirectUser();
     }
 
-    /**
-     * توجيه المستخدم بناءً على نوعه
-     */
+
     private function redirectUser(): RedirectResponse
     {
         $user = Auth::user();
 
-        if (!$user->company->subscription) {
+        if ($user->role === 'superadmin') {
+            return redirect('/admin');
+        }
+
+        if (!$user->company || !$user->company->subscription) {
             return redirect('/allplans');
         }
 
-        switch ($user->system_type) {
-            case 'clubs':
-                return redirect('/clubs');
-            case 'manager':
-                return redirect('/admin');
-            case 'retail':
-            case 'services':
-            case 'education':
-            case 'realEstate':
-            case 'delivery':
-            case 'travels':
-            case 'gym':
-            case 'hotel':
-                return redirect('/retailFlow');
-            default:
-                return redirect('/');
-        }
+        return redirect('/clubs');
     }
 }

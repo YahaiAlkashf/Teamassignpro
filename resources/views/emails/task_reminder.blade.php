@@ -43,8 +43,7 @@
         </div>
 
         <div class="footer">
-            <p>هذا البريد الإلكتروني تم إرساله تلقائياً، يرجى عدم الرد عليه.</p>
-            <p>© {{ date('Y') }} {{ $task->company->name ?? 'System' }}</p>
+                © {{ date('Y') }} TeamAssign Inc. جميع الحقوق محفوظة
         </div>
     </div>
 </body>

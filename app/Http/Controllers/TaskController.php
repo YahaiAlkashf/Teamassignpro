@@ -34,13 +34,27 @@ class TaskController extends Controller
 
     public function store(Request $request)
     {
+        $allowedMimes = [
+            'jpg,jpeg,png,gif,webp,svg',
+            'pdf,doc,docx,xls,xlsx,txt',
+            'ppt,pptx',
+            'zip,rar,7z'
+        ];
+
+        $allMimes = implode(',', [
+            'jpg','jpeg','png','gif','webp','svg',
+            'pdf','doc','docx','xls','xlsx','txt',
+            'ppt','pptx',
+            'zip','rar','7z'
+        ]);
+
         $validator = Validator::make($request->all(), [
             'title' => 'required|string',
             'description' => 'nullable|string',
             'assigned_to' => 'required|array',
             'assigned_to.*' => 'required|exists:users,id',
             'due_date' => 'required|date|after_or_equal:today',
-            'files.*' => 'nullable|file',
+            'files.*' => 'nullable|file|mimes:' . $allMimes . '|max:10240',
         ], [
             'title.required' => 'العنوان مطلوب',
             'title.string' => 'العنوان يجب أن يكون نصًا',
@@ -56,9 +70,9 @@ class TaskController extends Controller
             'due_date.after_or_equal' => 'تاريخ الاستحقاق يجب أن يكون اليوم أو بعده',
 
             'files.*.file' => 'يجب أن يكون العنصر ملفًا صالحًا',
-            'files.*.max' => 'حجم الملف لا يجب أن يتجاوز 40 ميجابايت',
+            'files.*.mimes' => 'الملف يجب أن يكون من الأنواع المسموحة: صور (jpg, png, gif), مستندات (pdf, doc, docx), عروض تقديمية (ppt, pptx), ملفات مضغوطة (zip, rar)',
+            'files.*.max' => 'حجم الملف لا يجب أن يتجاوز 10 ميجابايت',
         ]);
-
 
         if ($validator->fails()) {
             return response()->json([
@@ -66,6 +80,29 @@ class TaskController extends Controller
                 'errors' => $validator->errors()
             ], 422);
         }
+
+        if ($request->hasFile('files')) {
+            foreach ($request->file('files') as $file) {
+                $validation = $this->validateFileByType($file);
+                if (!$validation['valid']) {
+                    return response()->json([
+                        'success' => false,
+                        'errors' => [
+                            'files' => [
+                                sprintf(
+                                    'الملف "%s" غير صالح. النوع: %s، الحجم الحالي: %s، الحد الأقصى المسموح: %s',
+                                    $validation['fileName'],
+                                    $validation['type'] ?? 'غير معروف',
+                                    $validation['currentSizeFormatted'],
+                                    $validation['maxSizeFormatted']
+                                )
+                            ]
+                        ]
+                    ], 422);
+                }
+            }
+        }
+
         $arr = count($request->assigned_to);
         $countTasks = Task::where('company_id', Auth::user()->company_id)
          ->max('task_id');
@@ -89,7 +126,7 @@ class TaskController extends Controller
                     'assigned_to' => $user_id,
                     'assigned_by' => Auth::id(),
                     'due_date' => $request->due_date,
-                    'status' => 'pending',
+                    'status' => 'in_progress',
                     'company_id' => Auth::user()->company_id,
                     'task_id' => $newTaskId,
                 ]);
@@ -121,13 +158,74 @@ class TaskController extends Controller
         ], 201);
     }
 
+
+    private function validateFileByType($file)
+    {
+
+        $maxSizes = [
+            'image' => 5120,      
+            'document' => 10240,   
+            'presentation' => 20480, 
+            'archive' => 25600,    
+            'default' => 10240,     
+        ];
+
+     
+        $types = [
+            'image' => ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
+            'document' => ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/plain'],
+            'presentation' => ['application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+            'archive' => ['application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed'],
+        ];
+
+        // تحديد نوع الملف
+        $fileType = 'default';
+        $mimeType = $file->getMimeType();
+        foreach ($types as $type => $mimes) {
+            if (in_array($mimeType, $mimes)) {
+                $fileType = $type;
+                break;
+            }
+        }
+
+        // الحجم الأقصى المسموح
+        $maxSize = $maxSizes[$fileType] ?? $maxSizes['default'];
+
+        // التحقق من الحجم
+        $isValid = $file->isValid() && $file->getSize() <= ($maxSize * 1024);
+
+        // تنسيق الحجم للعرض
+        $formattedSize = function($bytes) {
+            if ($bytes >= 1048576) {
+                return number_format($bytes / 1048576, 2) . ' MB';
+            } elseif ($bytes >= 1024) {
+                return number_format($bytes / 1024, 2) . ' KB';
+            }
+            return $bytes . ' B';
+        };
+
+        return [
+            'valid' => $isValid,
+            'type' => $fileType,
+            'maxSize' => $maxSize,
+            'maxSizeFormatted' => $formattedSize($maxSize * 1024),
+            'currentSizeFormatted' => $formattedSize($file->getSize()),
+            'fileName' => $file->getClientOriginalName(),
+            'mimeType' => $mimeType,
+        ];
+    }
+
     public function update(Request $request, $id)
     {
         $originalTask = Task::where('id', $id)
             ->where('company_id', Auth::user()->company_id)
             ->firstOrFail();
-
-
+        $allMimes = implode(',', [
+            'jpg','jpeg','png','gif','webp','svg',
+            'pdf','doc','docx','xls','xlsx','txt',
+            'ppt','pptx',
+            'zip','rar','7z'
+        ]);
 
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
@@ -135,7 +233,7 @@ class TaskController extends Controller
             'assigned_to' => 'required|array',
             'assigned_to.*' => 'required|exists:users,id',
             'due_date' => 'required|date|after_or_equal:today',
-            'files.*' => 'nullable|file|max:40960', // 40MB
+            'files.*' => 'nullable|file|mimes:' . $allMimes . '|max:10240',
         ], [
             'title.required' => 'العنوان مطلوب',
             'title.string' => 'العنوان يجب أن يكون نصًا',
@@ -151,7 +249,8 @@ class TaskController extends Controller
             'due_date.after_or_equal' => 'تاريخ الاستحقاق يجب أن يكون اليوم أو بعده',
 
             'files.*.file' => 'يجب أن يكون العنصر ملفًا صالحًا',
-            'files.*.max' => 'حجم الملف لا يجب أن يتجاوز 40 ميجابايت',
+            'files.*.mimes' => 'الملف يجب أن يكون من الأنواع المسموحة: صور (jpg, png, gif), مستندات (pdf, doc, docx), عروض تقديمية (ppt, pptx), ملفات مضغوطة (zip, rar)',
+            'files.*.max' => 'حجم الملف لا يجب أن يتجاوز 10 ميجابايت',
         ]);
 
         if ($validator->fails()) {
@@ -161,8 +260,27 @@ class TaskController extends Controller
             ], 422);
         }
 
-        // بدء transaction للتأكد من سلامة البيانات
-
+        if ($request->hasFile('files')) {
+            foreach ($request->file('files') as $file) {
+                $validation = $this->validateFileByType($file);
+                if (!$validation['valid']) {
+                    return response()->json([
+                        'success' => false,
+                        'errors' => [
+                            'files' => [
+                                sprintf(
+                                    'الملف "%s" غير صالح. النوع: %s، الحجم الحالي: %s، الحد الأقصى المسموح: %s',
+                                    $validation['fileName'],
+                                    $validation['type'] ?? 'غير معروف',
+                                    $validation['currentSizeFormatted'],
+                                    $validation['maxSizeFormatted']
+                                )
+                            ]
+                        ]
+                    ], 422);
+                }
+            }
+        }
 
         try {
             $arr = count($request->assigned_to);
@@ -173,7 +291,6 @@ class TaskController extends Controller
                 $taskIdToUse = $maxTaskId ? $maxTaskId + 1 : 1;
             }
 
-            // حفظ الملفات المؤقتاً إذا وجدت
             $uploadedFiles = [];
             if ($request->hasFile('files')) {
                 foreach ($request->file('files') as $file) {
@@ -181,7 +298,6 @@ class TaskController extends Controller
                 }
             }
 
-            // حفظ المهام والملفات الأصلية مؤقتاً
             $originalTasksData = [];
             if ($originalTask->task_id) {
                 $groupTasks = Task::where('task_id', $originalTask->task_id)
@@ -202,14 +318,12 @@ class TaskController extends Controller
                 ];
             }
 
-            // حذف المهام الأصلية
             if ($originalTask->task_id) {
                 $groupTasks = Task::where('task_id', $originalTask->task_id)
                     ->where('company_id', Auth::user()->company_id)
                     ->get();
 
                 foreach ($groupTasks as $groupTask) {
-                    // لا تحذف الملفات هنا، سنحذفها بعد نجاح العملية
                     $groupTask->delete();
                 }
             } else {
@@ -221,7 +335,6 @@ class TaskController extends Controller
             foreach ($request->assigned_to as $user_id) {
                 $assignedUser = User::findOrFail($user_id);
                 if ($assignedUser->company_id !== Auth::user()->company_id) {
-
                     return response()->json([
                         'success' => false,
                         'message' => 'لا يمكن تعيين المهمة لمستخدم من شركة أخرى'
@@ -234,7 +347,7 @@ class TaskController extends Controller
                     'assigned_to' => $user_id,
                     'assigned_by' => Auth::id(),
                     'due_date' => $request->due_date,
-                    'status' => 'pending',
+                    'status' => 'in_progress',
                     'company_id' => Auth::user()->company_id,
                     'task_id' => $taskIdToUse,
                 ];
@@ -242,19 +355,15 @@ class TaskController extends Controller
                 $task = Task::create($taskData);
                 $createdTasks[] = $task;
 
-                // رفع الملفات للمهمة الجديدة
                 if (!empty($uploadedFiles)) {
                     foreach ($uploadedFiles as $file) {
                         $path = $file->store("tasks/{$task->id}", 'public');
-
                         $task->files()->create([
-                            'file_name'   => $file->getClientOriginalName(),
-                            'file_path'   => $path,
-                            'file_type'   => $file->getClientMimeType(),
+                            'file_name' => $file->getClientOriginalName(),
+                            'file_path' => $path,
+                            'file_type' => $file->getMimeType(),
                             'uploaded_by' => Auth::id(),
                         ]);
-
-
                     }
                 }
 
@@ -264,7 +373,6 @@ class TaskController extends Controller
                 }
             }
 
-            // بعد نجاح كل شيء، احذف الملفات القديمة
             foreach ($originalTasksData as $originalData) {
                 foreach ($originalData['files'] as $file) {
                     if (Storage::disk('public')->exists($file['file_path'])) {
@@ -272,8 +380,6 @@ class TaskController extends Controller
                     }
                 }
             }
-
-
 
             return response()->json([
                 'success' => true,
@@ -283,8 +389,6 @@ class TaskController extends Controller
             ]);
 
         } catch (\Exception $e) {
-
-
             return response()->json([
                 'success' => false,
                 'message' => 'حدث خطأ أثناء تحديث المهمة',
@@ -298,8 +402,6 @@ class TaskController extends Controller
         $task = Task::where('id', $id)
             ->where('company_id', Auth::user()->company_id)
             ->firstOrFail();
-
-
 
             $tasks=Task::where('company_id', Auth::user()->company_id)->where('task_id', $task->task_id)->get();
             foreach ($tasks as $task) {
@@ -320,7 +422,6 @@ class TaskController extends Controller
         $task = Task::where('id', $id)
             ->where('company_id', Auth::user()->company_id)
             ->firstOrFail();
-
 
         $validator = Validator::make($request->all(), [
             'status' => 'required|in:pending,pending,in_progress,completed,overdue'
@@ -344,41 +445,79 @@ class TaskController extends Controller
 
     public function taskText(Request $request ,$id)
     {
-            $validator = Validator::make($request->all(), [
-                'task_text' => 'nullable',
-                'task_file' => 'nullable|file'
-            ]);
+        // تعريف الامتدادات المسموحة
+        $allMimes = implode(',', [
+            'jpg','jpeg','png','gif','webp','svg',
+            'pdf','doc','docx','xls','xlsx','txt',
+            'ppt','pptx',
+            'zip','rar','7z'
+        ]);
 
-            if ($validator->fails()) {
+        $validator = Validator::make($request->all(), [
+            'task_text' => 'nullable|string',
+            'task_file' => 'nullable|file|mimes:' . $allMimes . '|max:10240',
+        ], [
+            'task_text.string' => 'النص يجب أن يكون نصًا',
+            'task_file.file' => 'يجب أن يكون العنصر ملفًا صالحًا',
+            'task_file.mimes' => 'الملف يجب أن يكون من الأنواع المسموحة: صور (jpg, png, gif), مستندات (pdf, doc, docx), عروض تقديمية (ppt, pptx), ملفات مضغوطة (zip, rar)',
+            'task_file.max' => 'حجم الملف لا يجب أن يتجاوز 10 ميجابايت',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors'  => $validator->errors()
+            ], 422);
+        }
+
+        // التحقق الإضافي من الملف حسب نوعه
+        if ($request->hasFile('task_file')) {
+            $file = $request->file('task_file');
+            $validation = $this->validateFileByType($file);
+            if (!$validation['valid']) {
                 return response()->json([
                     'success' => false,
-                    'errors'  => $validator->errors()
+                    'errors' => [
+                        'task_file' => [
+                            sprintf(
+                                'الملف "%s" غير صالح. النوع: %s، الحجم الحالي: %s، الحد الأقصى المسموح: %s',
+                                $validation['fileName'],
+                                $validation['type'] ?? 'غير معروف',
+                                $validation['currentSizeFormatted'],
+                                $validation['maxSizeFormatted']
+                            )
+                        ]
+                    ]
                 ], 422);
             }
+        }
 
-            $task = Task::where('id', $id)
-                ->where('company_id', Auth::user()->company_id)
-                ->firstOrFail();
+        $task = Task::where('id', $id)
+            ->where('company_id', Auth::user()->company_id)
+            ->firstOrFail();
 
+        if ($request->filled('task_text')) {
+            $task->update(['task_text' => $request->task_text]);
+        }
 
-            if ($request->filled('task_text')) {
-                $task->update(['task_text' => $request->task_text]);
+        if ($request->hasFile('task_file')) {
+            // حذف الملف القديم إذا وجد
+            if ($task->task_file && Storage::disk('public')->exists($task->task_file)) {
+                Storage::disk('public')->delete($task->task_file);
             }
 
-            if ($request->hasFile('task_file')) {
-                $file = $request->file('task_file');
-                $path = $file->store("tasks/{$task->id}", 'public');
+            $file = $request->file('task_file');
+            $path = $file->store("tasks/{$task->id}", 'public');
 
-                $task->update([
-                    'task_file' => $path,
-                ]);
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'تم تحديث المهمة بنجاح',
-                'task'    => $task
+            $task->update([
+                'task_file' => $path,
             ]);
-    }
+        }
 
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث المهمة بنجاح',
+            'task'    => $task
+        ]);
+    }
 }

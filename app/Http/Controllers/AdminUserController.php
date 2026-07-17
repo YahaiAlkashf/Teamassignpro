@@ -21,39 +21,35 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+
 class AdminUserController extends Controller
 {
-
+   
     public function users()
     {
-        $users = User::with('company')->where('role', 'superadmin')->get();
+        $users = User::with('company')->get();
         return response()->json(['users' => $users]);
     }
 
     public function customers()
     {
-        $customers = User::whereHas('company', function ($query) {
-            $query->whereIn('subscription', ['basic', 'premium', 'vip']);
-        })->where('role', 'superadmin')->with('company')->get();
+        $customers = User::with('company')->get();
 
         return response()->json([
             'customers' => $customers
         ]);
     }
 
-
+   
     public function store(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:' . User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'company_name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:255',
-            'address' => 'nullable|string|max:255',
-            'logo' => 'nullable|max:2048',
-            'system_type' => 'required',
-            'country' => 'required'
+            'logo' => 'nullable|image|max:2048',
+            'country' => 'nullable|string|max:255',
         ], [
             'name.required' => 'حقل الاسم مطلوب',
             'name.string' => 'الاسم يجب أن يكون نصاً',
@@ -69,112 +65,102 @@ class AdminUserController extends Controller
             'company_name.required' => 'حقل اسم الشركة مطلوب',
             'company_name.string' => 'اسم الشركة يجب أن يكون نصاً',
             'company_name.max' => 'اسم الشركة يجب ألا يتجاوز 255 حرفاً',
-            'phone.string' => 'رقم الهاتف يجب أن يكون نصاً',
-            'phone.max' => 'رقم الهاتف يجب ألا يتجاوز 255 حرفاً',
-            'address.string' => 'العنوان يجب أن يكون نصاً',
-            'address.max' => 'العنوان يجب ألا يتجاوز 255 حرفاً',
+            'logo.image' => 'الملف المرفوع يجب أن يكون صورة',
             'logo.max' => 'حجم الشعار يجب ألا يتجاوز 2 ميجابايت',
-            'system_type.required' => 'حقل نوع النظام مطلوب',
-            'country.required' => 'حقل الدولة مطلوب',
         ]);
 
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+      
         $logo = null;
         if ($request->hasFile('logo') && $request->file('logo')->isValid()) {
             $logo = $request->file('logo')->store('companies_logo', 'public');
         }
 
+      
         $company = Company::create([
             'company_name' => $request->company_name,
-            'phone' => $request->phone,
-            'address' => $request->address,
             'logo' => $logo,
-
+            'subscription' => null, 
+            'subscription_expires_at' => null,
+            'plan' => null,
         ]);
 
+      
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'company_id' => $company->id,
-            'system_type' => $request->system_type,
-            'role' => 'superadmin',
-            'country' => $request->country
+            'role' => 'admin',
+            'country' => $request->country,
+        ]);
+        
+        Member::create([
+            'name' => $request->name,
+            'phone' => $request->phone ?? '',
+            'role' => 'admin',
+            'rating' => 5,
+            'user_id' => $user->id,
+            'company_id' => $user->company_id
         ]);
 
-        if ($request->system_type === 'clubs') {
-            $cycle = Cycle::firstOrCreate(
-                ['name' => 'manager', 'company_id' => $company->id],
-                ['name' => 'manager', 'company_id' => $company->id]
-            );
-
-            $existingMember = Member::where('user_id', $user->id)->first();
-            if (!$existingMember) {
-                Member::create([
-                    'name' => $request->name,
-                    'phone' => $request->phone,
-                    'cycle_id' => $cycle->id,
-                    'role' => 'manager',
-                    'rating' => 5,
-                    'user_id' => $user->id,
-                    'company_id' => $user->company_id
-                ]);
-            }
-        }
-
         event(new Registered($user));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم إضافة المستخدم بنجاح',
+            'user' => $user
+        ]);
     }
 
+   
     public function update(Request $request, $id)
     {
         $user = User::findOrFail($id);
 
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:' . User::class . ',email,' . $user->id,
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
             'company_name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:255',
-            'address' => 'nullable|string|max:255',
             'logo' => 'nullable|image|max:2048',
-            'system_type' => 'required',
-            'country' => 'required',
+            'country' => 'nullable|string|max:255',
         ], [
             'name.required' => 'حقل الاسم مطلوب',
             'name.string' => 'الاسم يجب أن يكون نصاً',
             'name.max' => 'الاسم يجب ألا يتجاوز 255 حرفاً',
-
             'email.required' => 'حقل البريد الإلكتروني مطلوب',
             'email.string' => 'البريد الإلكتروني يجب أن يكون نصاً',
             'email.lowercase' => 'البريد الإلكتروني يجب أن يكون بأحرف صغيرة',
             'email.email' => 'صيغة البريد الإلكتروني غير صحيحة',
             'email.max' => 'البريد الإلكتروني يجب ألا يتجاوز 255 حرفاً',
             'email.unique' => 'البريد الإلكتروني مسجل مسبقاً',
-
             'password.confirmed' => 'تأكيد كلمة المرور غير متطابق',
-
             'company_name.required' => 'حقل اسم الشركة مطلوب',
             'company_name.string' => 'اسم الشركة يجب أن يكون نصاً',
             'company_name.max' => 'اسم الشركة يجب ألا يتجاوز 255 حرفاً',
-
-            'phone.string' => 'رقم الهاتف يجب أن يكون نصاً',
-            'phone.max' => 'رقم الهاتف يجب ألا يتجاوز 255 حرفاً',
-
-            'address.string' => 'العنوان يجب أن يكون نصاً',
-            'address.max' => 'العنوان يجب ألا يتجاوز 255 حرفاً',
-
             'logo.image' => 'الملف المرفوع يجب أن يكون صورة',
             'logo.max' => 'حجم الشعار يجب ألا يتجاوز 2 ميجابايت',
-
-            'system_type.required' => 'حقل نوع النظام مطلوب',
-            'country.required' => 'حقل الدولة مطلوب',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
         $company = Company::findOrFail($user->company_id);
 
+  
         $companyData = [
             'company_name' => $request->company_name,
-            'phone' => $request->phone,
-            'address' => $request->address,
         ];
 
         if ($request->hasFile('logo') && $request->file('logo')->isValid()) {
@@ -186,10 +172,10 @@ class AdminUserController extends Controller
 
         $company->update($companyData);
 
+      
         $userData = [
             'name' => $request->name,
             'email' => $request->email,
-            'system_type' => $request->system_type,
             'country' => $request->country,
         ];
 
@@ -199,165 +185,76 @@ class AdminUserController extends Controller
 
         $user->update($userData);
 
-        if ($request->system_type === 'clubs') {
-            $member = Member::firstOrNew(['user_id' => $user->id]);
-
-            if (!$member->exists) {
-                $cycle = Cycle::firstOrCreate(
-                    ['name' => 'manager', 'company_id' => $user->company_id],
-                    ['name' => 'manager', 'company_id' => $user->company_id]
-                );
-
-                $member->fill([
-                    'name' => $request->name,
-                    'phone' => $request->phone,
-                    'cycle_id' => $cycle->id,
-                    'role' => 'manager',
-                    'rating' => 5,
-                    'user_id' => $user->id,
-                    'company_id' => $user->company_id // إضافة company_id الناقصة
-                ])->save();
-            } else {
-                $member->update([
-                    'name' => $request->name,
-                    'phone' => $request->phone,
-                ]);
-            }
-        } else {
-            Member::where('user_id', $user->id)->delete();
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث بيانات المستخدم بنجاح',
+            'user' => $user
+        ]);
     }
 
+  
     public function destroy($id)
     {
         $user = User::find($id);
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'المستخدم غير موجود'
+            ], 404);
+        }
 
-        // Company::where('id', $user->company_id)->delete();
+       
+        if ($user->company && $user->company->logo) {
+            Storage::disk('public')->delete($user->company->logo);
+        }
 
+  
+        if ($user->company && $user->role=='admin') {
+            $user->company->delete();
+        }
+
+     
         $user->delete();
-        return response()->json(['message' => 'User deleted successfully']);
-    }
 
-    public function addSubscription(Request $request, $id)
-    {
-        $company = Company::findOrFail($id);
-
-        $request->validate([
-            'subscription' => 'nullable',
-
+        return response()->json([
+            'success' => true,
+            'message' => 'تم حذف المستخدم بنجاح'
         ]);
-        if ($request->plan === "monthly") {
-            $company->update([
-                'subscription' => $request->subscription,
-                'subscription_expires_at' => now()->addMonth(),
-                'plan' => $request->plan
-            ]);
-        } else {
-            $company->update([
-                'subscription' => $request->subscription,
-                'subscription_expires_at' => now()->addYear(),
-                'plan' => $request->plan
-            ]);
-        }
     }
 
-    public function exportUsersPDF()
-    {
-        $users = User::with('company')->where('role', 'superadmin')->where('system_type', '!=', 'manager')->get();
-
-        $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
-
-        $pdf->SetCreator('Your System');
-        $pdf->SetAuthor('Your Name');
-        $pdf->SetTitle('تقرير المستخدمين');
-        $pdf->SetSubject('تقرير المستخدمين');
-
-        $pdf->AddPage();
-        $pdf->SetFont('dejavusans', '', 10);
-
-        $html = '<h1 style="text-align:center; font-family:dejavusans;">تقرير المستخدمين</h1>';
-        $html .= '<p style="text-align:center;">تاريخ التقرير: ' . date('Y-m-d') . '</p>';
-
-        $html .= '<table dir="rtl" border="1" cellpadding="5" style="width:100%; border-collapse:collapse; direction:rtl; text-align:right; font-family:dejavusans;">';
-        $html .= "<thead><tr>
-                <th>#</th>
-                <th>الاسم</th>
-                <th>الرتبة</th>
-                <th>البريد الإلكتروني</th>
-                <th>الهاتف</th>
-                <th>نوع النظام</th>
-                <th>الدولة</th>
-                <th>اسم الشركة</th>
-                <th>العنوان</th>
-                <th>نوع الباقة</th>
-                <th>الخطة</th>
-                <th>تاريخ الانتهاء</th>
-                </tr></thead>";
-
-        $html .= '<tbody>';
-
-        foreach ($users as $index => $user) {
-            $html .= '<tr>
-                    <td>' . ($index + 1) . '</td>
-                    <td>' . $user->name . '</td>
-                    <td>' . $user->role . '</td>
-                    <td>' . $user->email . '</td>
-                    <td>' . ($user->company->phone ?? 'غير محدد') . '</td>
-                    <td>' . $user->system_type . '</td>
-                    <td>' . $user->country . '</td>
-                    <td>' . ($user->company->company_name ?? 'غير محدد') . '</td>
-                    <td>' . ($user->company->address ?? 'غير محدد') . '</td>
-                    <td>' . $user->company->subscription . '</td>
-                    <td>' . $user->company->plan . '</td>
-                    <td>' . $user->company->subscription_expires_at . '</td>
-                    </tr>';
-        }
-
-        $html .= '</tbody></table>';
-
-        $pdf->writeHTML($html, true, false, true, false, '');
-
-        $fileName = 'تقرير_المستخدمين_' . date('Y-m-d') . '.pdf';
-        $pdf->Output($fileName, 'D');
-
-        exit;
-    }
-
+     
     public function exportUsersExcel()
     {
-        $users = User::with('company')->where('role', 'superadmin')->where('system_type', '!=', 'manager')->get();
+        $users = User::with('company')
+            ->where('role', 'superadmin')
+            ->get();
 
         $fileName = 'المستخدمين_' . date('Y-m-d') . '.xlsx';
-
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('المستخدمين');
         $sheet->setRightToLeft(true);
 
-
         $headers = [
             '#',
             'الاسم',
             'الرتبة',
             'البريد الإلكتروني',
-            'الهاتف',
-            'نوع النظام',
             'الدولة',
             'اسم الشركة',
             'العنوان',
-            'نوع الباقة',
+            'الباقة',
             'الخطة',
             'تاريخ الانتهاء',
         ];
-
 
         $col = 'A';
         foreach ($headers as $header) {
             $sheet->setCellValue($col . '1', $header);
             $col++;
         }
-
 
         $headerStyle = [
             'font' => [
@@ -366,7 +263,7 @@ class AdminUserController extends Controller
             ],
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
-                'color' => ['rgb' => 'FFFF00']
+                'color' => ['rgb' => '9B59B6']
             ],
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_CENTER,
@@ -379,28 +276,27 @@ class AdminUserController extends Controller
             ]
         ];
 
-
         $lastHeaderColumn = chr(64 + count($headers));
         $sheet->getStyle('A1:' . $lastHeaderColumn . '1')->applyFromArray($headerStyle);
 
         $row = 2;
         foreach ($users as $index => $user) {
+            $subscription = $user->company->subscription ?? 'غير مشترك';
+            $subscriptionLabel = $subscription === 'advanced' ? 'متقدمة ⭐' : ($subscription ?? 'غير مشترك');
+            
             $sheet->setCellValue('A' . $row, $index + 1);
             $sheet->setCellValue('B' . $row, $user->name ?? '');
             $sheet->setCellValue('C' . $row, $user->role ?? '');
             $sheet->setCellValue('D' . $row, $user->email ?? '');
-            $sheet->setCellValue('E' . $row, $user->company->phone ?? 'غير محدد');
-            $sheet->setCellValue('F' . $row, $user->system_type ?? '');
-            $sheet->setCellValue('G' . $row, $user->country ?? '');
-            $sheet->setCellValue('H' . $row, $user->company->company_name ?? 'غير محدد');
-            $sheet->setCellValue('I' . $row, $user->company->address ?? 'غير محدد');
-            $sheet->setCellValue('J' . $row, $user->company->subscription ?? 'غير محدد');
-            $sheet->setCellValue('K' . $row, $user->company->plan ?? 'غير محدد');
-            $sheet->setCellValue('L' . $row, $user->company?->subscription_expires_at ? $user->company->subscription_expires_at : '');
+            $sheet->setCellValue('E' . $row, $user->country ?? '');
+            $sheet->setCellValue('F' . $row, $user->company->company_name ?? 'غير محدد');
+            $sheet->setCellValue('G' . $row, $user->company->address ?? 'غير محدد');
+            $sheet->setCellValue('H' . $row, $subscriptionLabel);
+            $sheet->setCellValue('I' . $row, $user->company->plan ?? 'غير محدد');
+            $sheet->setCellValue('J' . $row, $user->company->subscription_expires_at ?? '');
 
             $row++;
         }
-
 
         $dataStyle = [
             'alignment' => [
@@ -418,14 +314,11 @@ class AdminUserController extends Controller
             $sheet->getStyle('A2:' . $lastHeaderColumn . ($row - 1))->applyFromArray($dataStyle);
         }
 
-
         foreach (range('A', $lastHeaderColumn) as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
-
         $writer = new Xlsx($spreadsheet);
-
 
         return response()->streamDownload(function () use ($writer) {
             $writer->save('php://output');
@@ -434,36 +327,126 @@ class AdminUserController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
         ]);
     }
-
-
-
-
-
-    public function subscriptionBasic(Request $request)
+    
+    public function addSubscription(Request $request, $id)
     {
+        $company = Company::findOrFail($id);
 
-        $user = Auth::user();
-        $user->company->update([
-            'subscription' => 'basic',
-            // 'trial_used' => true,
-            'subscription_expires_at' => now()->addDays(7)
+        $validator = Validator::make($request->all(), [
+            'subscription' => 'nullable|string|in:advanced,none',
+            'plan' => 'nullable|string|in:monthly,yearly',
+        ], [
+            'subscription.in' => 'نوع الباقة غير صحيح',
+            'plan.in' => 'نوع الخطة غير صحيح',
         ]);
-        $user->save();
 
-        return response()->json(['success' => true]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+      
+        if ($request->subscription === 'none' || empty($request->subscription)) {
+            $company->update([
+                'subscription' => null,
+                'subscription_expires_at' => null,
+                'plan' => null,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم إلغاء تفعيل الباقة بنجاح',
+                'subscription' => null
+            ]);
+        }
+
+ 
+        $expiryDate = $request->plan === 'yearly' 
+            ? now()->addYear() 
+            : now()->addMonth();
+
+        $company->update([
+            'subscription' => 'advanced',
+            'subscription_expires_at' => $expiryDate,
+            'plan' => $request->plan ?? 'monthly',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تفعيل الباقة المتقدمة بنجاح',
+            'subscription' => 'advanced',
+            'plan' => $request->plan ?? 'monthly',
+            'expires_at' => $expiryDate
+        ]);
     }
 
-    public function subscriptioncoupons(Request $request)
+    public function validateCoupon(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'code'     => 'required|exists:coupons,code',
+            'code' => 'required|exists:coupons,code',
+            'plan_id' => 'required|exists:plans,id',
+            'type' => 'required|in:monthly,yearly'
+        ], [
+            'code.required' => 'كود الخصم مطلوب',
+            'code.exists' => 'كود الخصم غير موجود',
+            'plan_id.required' => 'الباقة مطلوبة',
+            'plan_id.exists' => 'الباقة غير موجودة',
+            'type.required' => 'نوع الخطة مطلوب',
+            'type.in' => 'نوع الخطة غير صحيح',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $coupon = Coupon::where('code', $request->code)
+            ->where('plan', $request->type)
+            ->with('plan')
+            ->first();
+
+        if (!$coupon) {
+            return response()->json([
+                'success' => false,
+                'errors' => ['code' => ['كود الخصم غير صالح لهذا النوع من الباقة']]
+            ], 422);
+        }
+
+        if ($coupon->plan_id != $request->plan_id) {
+            return response()->json([
+                'success' => false,
+                'errors' => ['code' => ['كود الخصم غير صالح لهذه الباقة']]
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'coupon' => [
+                'id' => $coupon->id,
+                'code' => $coupon->code,
+                'price_in_egp' => $coupon->price_in_egp,
+                'price_outside_egp' => $coupon->price_outside_egp,
+                'plan' => $coupon->plan,
+            ]
+        ]);
+    }
+   
+    public function subscriptionCoupons(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'code' => 'required|exists:coupons,code',
             'planName' => 'required|exists:plans,name',
-            'type' => 'required'
+            'type' => 'required|in:monthly,yearly'
         ], [
             'code.required' => 'كود الخصم مطلوب',
             'code.exists' => 'كود الخصم غير موجود',
             'planName.required' => 'الباقة مطلوبة',
             'planName.exists' => 'الباقة غير موجودة',
+            'type.required' => 'نوع الخطة مطلوب',
         ]);
 
         if ($validator->fails()) {
@@ -474,7 +457,8 @@ class AdminUserController extends Controller
         }
 
         $user = Auth::user();
-        $coupon = Coupon::where('code', $request->code)->where('plan', $request->type)
+        $coupon = Coupon::where('code', $request->code)
+            ->where('plan', $request->type)
             ->with('plan')
             ->first();
 
@@ -486,43 +470,29 @@ class AdminUserController extends Controller
                 'errors' => ['code' => ['كود الخصم غير صالح لهذه الباقة']]
             ], 422);
         }
-        if ($request->type === 'monthly') {
-            if ($coupon->price_in_egp === 0 || $coupon->price_outside_egp === 0) {
-                $company = Company::findOrFail($user->company_id);
-                $company->update([
-                    'subscription' => $request->planName,
-                    'subscription_expires_at' => now()->addMonth(),
-                    'plan' => $request->type
 
-                ]);
-                $user->save();
-                return response()->json([
-                    'success' => true,
-                    'free_subscription' => true,
-                    'redirect_url' => $this->getRedirectUrl($user->system_type),
-                    'message' => 'تم تفعيل الاشتراك المجاني بنجاح'
-                ]);
-            }
-        }else{
-        if ($coupon->price_in_egp === 0 || $coupon->price_outside_egp === 0) {
-                $company = Company::findOrFail($user->company_id);
-                $company->update([
-                    'subscription' => $request->planName,
-                    'subscription_expires_at' => now()->addYear(),
-                    'plan' => $request->type
-                ]);
-                $user->save();
+        $company = Company::findOrFail($user->company_id);
+        
+      
+        if ($coupon->price_in_egp == 0 || $coupon->price_outside_egp == 0) {
+            $expiryDate = $request->type === 'yearly' 
+                ? now()->addYear() 
+                : now()->addMonth();
 
-                return response()->json([
-                    'success' => true,
-                    'free_subscription' => true,
-                    'redirect_url' => $this->getRedirectUrl($user->system_type),
-                    'message' => 'تم تفعيل الاشتراك المجاني بنجاح'
-                ]);
-            }
+            $company->update([
+                'subscription' => $request->planName,
+                'subscription_expires_at' => $expiryDate,
+                'plan' => $request->type
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'free_subscription' => true,
+                'message' => 'تم تفعيل الاشتراك المجاني بنجاح'
+            ]);
         }
 
-
+    
         return response()->json([
             'success' => true,
             'free_subscription' => false,
@@ -538,38 +508,25 @@ class AdminUserController extends Controller
         ]);
     }
 
-    private function getRedirectUrl($systemType)
-    {
-        switch ($systemType) {
-            case 'clubs':
-                return '/clubs';
-            case 'manager':
-                return '/admin';
-            case 'retail':
-            case 'services':
-            case 'education':
-            case 'realEstate':
-            case 'delivery':
-            case 'travels':
-            case 'gym':
-            case 'hotel':
-                return '/retailFlow';
-            default:
-                return '/';
-        }
-    }
+
     public function activateFreeSubscription(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'plan' => 'required|exists:plans,name',
             'coupon_code' => 'required|exists:coupons,code',
-            'type'=> 'required'
+            'type' => 'required|in:monthly,yearly'
+        ], [
+            'plan.required' => 'الباقة مطلوبة',
+            'plan.exists' => 'الباقة غير موجودة',
+            'coupon_code.required' => 'كود الخصم مطلوب',
+            'coupon_code.exists' => 'كود الخصم غير موجود',
+            'type.required' => 'نوع الخطة مطلوب',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'بيانات غير صحيحة'
+                'errors' => $validator->errors()
             ], 422);
         }
 
@@ -586,24 +543,16 @@ class AdminUserController extends Controller
             }
 
             $company = Company::findOrFail($user->company_id);
-            if($request->type === 'monthly'){
+            
+            $expiryDate = $request->type === 'yearly' 
+                ? now()->addYear() 
+                : now()->addMonth();
 
             $company->update([
                 'subscription' => $request->plan,
-                'subscription_expires_at' => now()->addMonth(),
-                'trial_used' => true,
+                'subscription_expires_at' => $expiryDate,
                 'plan' => $request->type
             ]);
-        }else{
-            $company->update([
-                'subscription' => $request->plan,
-                'subscription_expires_at' => now()->addYear(),
-                'trial_used' => true,
-                'plan' => $request->type
-            ]);
-        }
-
-            $user->save();
 
             return response()->json([
                 'success' => true,
@@ -614,7 +563,7 @@ class AdminUserController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ أثناء تفعيل الاشتراك'
+                'message' => 'حدث خطأ أثناء تفعيل الاشتراك: ' . $e->getMessage()
             ], 500);
         }
     }

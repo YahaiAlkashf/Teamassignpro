@@ -11,7 +11,7 @@ import {
 } from "@heroicons/react/24/outline";
 import AdminLayout from "./layout";
 import { useTranslation } from "react-i18next";
-import EditCompanyDetails from "../RetailFlow/components/EditCompanyDetails";
+// import EditCompanyDetails from "../RetailFlow/components/EditCompanyDetails";
 
 
 export default function ClubDashboard() {
@@ -75,8 +75,8 @@ export default function ClubDashboard() {
                     <div className="flex items-center">
                         <TrophyIcon className="h-10 w-10 mr-4" />
                         <div>
-                            <h1 className="text-3xl font-bold">{t("لوحة تحكم النادي")}</h1>
-                            <p className="text-primary-light">{t("نظرة عامة على أداء النادي")}</p>
+                            <h1 className="text-3xl font-bold">{t("لوحة تحكم الشركة")}</h1>
+                            <p className="text-primary-light">{t("نظرة عامة على أداء الشركة")}</p>
                         </div>
                     </div>
                     <div className="text-right">
@@ -93,7 +93,7 @@ export default function ClubDashboard() {
                 </div>
 
                 {/* Statistics Cards */}
-                {(auth.user.role === 'superadmin')&& (
+                {(auth.user.role === 'admin')&& (
                     <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
                     <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border-l-4 border-blue-500">
@@ -123,7 +123,7 @@ export default function ClubDashboard() {
 
 
                 {/* Quick Actions */}
-                    <EditCompanyDetails />
+                    {/* <EditCompanyDetails /> */}
                 <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg">
                     <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-6">
                         {t("إجراءات سريعة")}
@@ -137,11 +137,11 @@ export default function ClubDashboard() {
                             <CalendarDaysIcon className="h-8 w-8 mx-auto mb-2" />
                             <span>{t("الفعاليات")}</span>
                         </Link>
-                        <Link href='/clubs/members' className="bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 text-purple-700 dark:text-purple-200 p-4 rounded-lg text-center transition-colors">
+                        <Link href='/clubs/reports' className="bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 text-purple-700 dark:text-purple-200 p-4 rounded-lg text-center transition-colors">
                             <TrophyIcon className="h-8 w-8 mx-auto mb-2" />
                             <span>{t("التقارير")}</span>
                         </Link>
-                        <Link href='/clubs/members' className="bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900 dark:hover:bg-yellow-800 text-yellow-700 dark:text-yellow-200 p-4 rounded-lg text-center transition-colors">
+                        <Link href='/clubs/leaderboard' className="bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900 dark:hover:bg-yellow-800 text-yellow-700 dark:text-yellow-200 p-4 rounded-lg text-center transition-colors">
                             <ChartBarIcon className="h-8 w-8 mx-auto mb-2" />
                             <span>{t("الإحصائيات")}</span>
                         </Link>

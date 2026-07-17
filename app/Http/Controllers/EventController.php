@@ -10,23 +10,22 @@ use App\Models\Event;
 use App\Models\EventAttendance;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
-use App\Services\WhatsAppService;
-use App\Models\CompanyWhatsappSetting;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
 class EventController extends Controller
 {
-    public function index()
-    {
-        $events = Event::where('company_id', Auth::user()->company_id)
-                     ->with(['attendances','attendances.user','attendances.user.member.cycle'])
-                     ->get();
+public function index()
+{
+    $events = Event::where('company_id', Auth::user()->company_id)
+        ->with(['attendances', 'attendances.user', 'attendances.user.member.cycle'])
+        ->orderBy('date', 'asc')
+        ->get();
 
-        return response()->json([
-            'events' => $events
-        ], 200);
-    }
+    return response()->json([
+        'events' => $events
+    ], 200);
+}
 
     public function store(Request $request)
     {
@@ -72,7 +71,7 @@ class EventController extends Controller
             }
         }
 
-        $this->sendWhatsAppNotifications($event);
+
 
         return response()->json([
             'message' => 'تم اضافة الحدث بنجاح',
@@ -201,40 +200,7 @@ class EventController extends Controller
     private function sendMails($user ,$event ){
         Mail::to($user->email)->queue(new EventCreatedMail($event, $user));
     }
-    protected function sendWhatsAppNotifications($event)
-    {
-        try {
-            $companyId = Auth::user()->company_id;
 
-            $whatsappSettings = CompanyWhatsappSetting::where('company_id', $companyId)
-                ->where('is_connected', true)
-                ->first();
-
-            if (!$whatsappSettings) {
-                Log::info('إعدادات واتساب غير متوفرة للشركة: ' . $companyId);
-                return;
-            }
-
-            $whatsappService = new WhatsAppService($companyId);
-
-            $members = User::where('company_id', $companyId)
-                ->whereNotNull('phone')
-                ->get();
-
-            foreach ($members as $member) {
-                try {
-                    $message = $this->formatEventMessage($event);
-                    $whatsappService->sendMessage($member->phone, $message);
-                    Log::info('تم إرسال إشعار واتساب للعضو: ' . $member->name);
-                } catch (\Exception $e) {
-                    Log::error('فشل إرسال إشعار واتساب للعضو ' . $member->name . ': ' . $e->getMessage());
-                }
-            }
-
-        } catch (\Exception $e) {
-            Log::error('فشل إرسال إشعارات الواتساب: ' . $e->getMessage());
-        }
-    }
 
 
     protected function formatEventMessage($event)

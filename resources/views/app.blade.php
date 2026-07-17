@@ -4,9 +4,9 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>سيستمى نظام متكامل لادارة الانشطة التجارية</title>
-        <meta name="description" content="سيستمى نظام متكامل لإدارة الأنشطة التجارية بجميع أنواعها، يساعدك على متابعة المبيعات والمخزون والفواتير والاشتراكات بسهولة واحترافية." />
-        <meta name="keywords" content="سيستم, نظام إدارة, إدارة الأنشطة التجارية, إدارة مبيعات, إدارة مخزون, إدارة فواتير, إدارة اشتراكات, برنامج محاسبة, برنامج ERP, نظام نقاط بيع, POS System" />
+        <title>TeamAssign - نظام إدارة الفرق والمشاريع والمهام</title>
+        <meta name="description" content="TeamAssign منصة SaaS متكاملة لإدارة الفرق والمشاريع والمهام. نظم فرق العمل، وزع المهام، وتابع الأداء بكل سهولة واحترافية. جرب مجاناً لمدة 7 أيام." />
+        <meta name="keywords" content="TeamAssign, إدارة الفرق, إدارة المشاريع, إدارة المهام, نظام إدارة, SaaS, إدارة الموظفين, إدارة الفعاليات, لوحة الشرف, إدارة الإعلانات, مكتبة الملفات, تقارير وإحصائيات, إدارة الأعمال, نظام إدارة متكامل" />
         <link rel="icon" type="image/x-icon" href="{{ asset('favicon-v2.ico') }}">
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">

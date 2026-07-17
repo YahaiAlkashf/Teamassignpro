@@ -16,11 +16,12 @@ import {
     FunnelIcon,
 } from "@heroicons/react/24/outline";
 import { useTranslation } from "react-i18next";
+import ConfirmModal from "./components/ConfirmModalAdd";
 
 export default function Schedules() {
-    const { app_url, auth } = usePage().props;
+    const { app_url, auth, permissions } = usePage().props;
     const { t } = useTranslation();
-    const [viewType, setViewType] = useState("weekly");
+    const [viewType, setViewType] = useState("all");
     const [events, setEvents] = useState([]);
     const [filteredEvents, setFilteredEvents] = useState([]);
     const [addModal, setAddModal] = useState(false);
@@ -44,6 +45,20 @@ export default function Schedules() {
         option: "select",
     });
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(10);
+
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        onConfirm: null,
+        title: '',
+        message: '',
+        confirmText: 'تأكيد',
+        confirmColor: 'bg-primary hover:bg-primary-dark',
+        icon: 'info',
+        loading: false,
+        iconColor: 'text-blue-500',
+    });
 
     const [calendarModal, setCalendarModal] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -51,6 +66,47 @@ export default function Schedules() {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [customFilterActive, setCustomFilterActive] = useState(false);
+
+    const permission = permissions?.permissions;
+    const isAdmin = auth.user?.role === 'admin';
+    const canAddEvents = isAdmin || permission?.add_events;
+
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = filteredEvents.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredEvents.length / itemsPerPage);
+
+    const paginate = (pageNumber) => {
+        if (pageNumber >= 1 && pageNumber <= totalPages) {
+            setCurrentPage(pageNumber);
+            const tableElement = document.querySelector('.overflow-x-auto');
+            if (tableElement) {
+                tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+    };
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filteredEvents.length]);
+
+    const showConfirmModal = (title, message, onConfirm, confirmText = 'تأكيد', confirmColor = 'bg-primary hover:bg-primary-dark', icon = 'info', iconColor = 'text-blue-500') => {
+        setConfirmModal({
+            isOpen: true,
+            onConfirm: onConfirm,
+            title: title,
+            message: message,
+            confirmText: confirmText,
+            confirmColor: confirmColor,
+            icon: icon,
+            loading: false,
+            iconColor: iconColor,
+        });
+    };
+
+    const closeConfirmModal = () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+    };
 
     const updateEventAttendanceLocally = (eventId, newStatus) => {
         setEvents((prevEvents) =>
@@ -80,7 +136,6 @@ export default function Schedules() {
         try {
             const response = await axios.get(`${app_url}/events`);
             setEvents(response.data.events);
-            // هنا نضيف تحديث للفلترة بعد جلب البيانات
             applyCurrentFilter(response.data.events);
         } catch (error) {
             console.log(error);
@@ -91,12 +146,13 @@ export default function Schedules() {
         showAllEvents();
     }, []);
 
-    // دالة جديدة لتطبيق الفلترة الحالية
     const applyCurrentFilter = (eventsList = events) => {
         const today = new Date();
         let filtered = [];
 
-        if (viewType === "daily" && !customFilterActive) {
+        if (viewType === "all" && !customFilterActive) {
+            filtered = eventsList;
+        } else if (viewType === "daily" && !customFilterActive) {
             filtered = eventsList.filter((event) => {
                 const eventDate = new Date(event.date);
                 return (
@@ -122,7 +178,6 @@ export default function Schedules() {
                 );
             });
         } else if (viewType === "custom" && customFilterActive) {
-            // فلترة حسب التاريخ المحدد
             filtered = eventsList.filter((event) => {
                 const eventDate = new Date(event.date);
                 return (
@@ -132,7 +187,6 @@ export default function Schedules() {
                 );
             });
         } else if (viewType === "month-custom" && customFilterActive) {
-            // فلترة حسب الشهر المحدد
             filtered = eventsList.filter((event) => {
                 const eventDate = new Date(event.date);
                 return (
@@ -141,14 +195,7 @@ export default function Schedules() {
                 );
             });
         } else {
-            // Default to weekly view
-            const startOfWeek = getStartOfWeek(today);
-            const endOfWeek = getEndOfWeek(today);
-
-            filtered = eventsList.filter((event) => {
-                const eventDate = new Date(event.date);
-                return eventDate >= startOfWeek && eventDate <= endOfWeek;
-            });
+            filtered = eventsList;
         }
 
         setFilteredEvents(filtered);
@@ -202,16 +249,45 @@ export default function Schedules() {
         setApologizingModal(true);
     };
 
-    const handleAttend = async (eventId, newStatus) => {
+    const handleAttendClick = (eventId) => {
+        const event = events.find(e => e.id === eventId);
+        showConfirmModal(
+            t("تأكيد الحضور"),
+            t(`هل أنت متأكد من تسجيل حضورك في النشاط "${event?.title}"؟`),
+            () => handleAttendConfirm(eventId, "attending"),
+            t("تأكيد الحضور"),
+            "bg-green-600 hover:bg-green-700",
+            "success",
+            "text-green-500"
+        );
+    };
+
+    const handleApologizeClick = (eventId) => {
+        const event = events.find(e => e.id === eventId);
+        showConfirmModal(
+            t("تأكيد الاعتذار"),
+            t(`هل أنت متأكد من تسجيل اعتذارك عن النشاط "${event?.title}"؟`),
+            () => handleAttendConfirm(eventId, "apologizing"),
+            t("تأكيد الاعتذار"),
+            "bg-red-600 hover:bg-red-700",
+            "error",
+            "text-red-500"
+        );
+    };
+
+    const handleAttendConfirm = async (eventId, newStatus) => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
         try {
             updateEventAttendanceLocally(eventId, newStatus);
             await axios.post(`${app_url}/events/${eventId}/status`, {
                 status: newStatus,
             });
 
+            setConfirmModal(prev => ({ ...prev, isOpen: false, loading: false }));
             showAllEvents();
         } catch (error) {
             console.log(error);
+            setConfirmModal(prev => ({ ...prev, loading: false }));
         }
     };
 
@@ -372,7 +448,7 @@ export default function Schedules() {
 
     const resetFilter = () => {
         setCustomFilterActive(false);
-        setViewType("weekly");
+        setViewType("all");
         applyCurrentFilter(events);
     };
 
@@ -386,10 +462,40 @@ export default function Schedules() {
         selectedMonth,
         selectedYear,
     ]);
-    const openDescriptionModal=(des)=>{
+
+    const openDescriptionModal = (des) => {
         setDescription(des);
         setModelDescription(true);
-     }
+    };
+
+    const renderPageNumbers = () => {
+        const pageNumbers = [];
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            pageNumbers.push(
+                <button
+                    key={i}
+                    onClick={() => paginate(i)}
+                    className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                        currentPage === i
+                            ? 'bg-primary text-white'
+                            : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                >
+                    {i}
+                </button>
+            );
+        }
+        return pageNumbers;
+    };
+
     return (
         <AdminLayout>
             <div className="mx-3 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-10">
@@ -398,7 +504,17 @@ export default function Schedules() {
                         {t("جداول المواعيد")}
                     </h3>
                     <div className="flex items-center gap-4">
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
+                            <button
+                                onClick={() => handleViewTypeChange("all")}
+                                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                                    viewType === "all" && !customFilterActive
+                                        ? "bg-primary text-white"
+                                        : "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+                                }`}
+                            >
+                                {t("جميع الأوقات")}
+                            </button>
                             <button
                                 onClick={() => handleViewTypeChange("daily")}
                                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
@@ -461,7 +577,7 @@ export default function Schedules() {
                                 </button>
                             </div>
                         </div>
-                        {(auth.user?.member?.add_events === 1 || auth.user.role === 'superadmin') && (
+                        {canAddEvents && (
                             <button
                                 onClick={handleAddEvent}
                                 className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors"
@@ -473,10 +589,11 @@ export default function Schedules() {
                     </div>
                 </div>
 
-                <div className="mb-4 text-sm text-gray-600 dark:text-gray-400 flex items-center gap-4">
+                <div className="mb-4 text-sm text-gray-600 dark:text-gray-400 flex items-center gap-4 flex-wrap">
                     <span>
                         {t("عرض الأحداث:")}
                         <span className="font-medium ml-2">
+                            {viewType === "all" && !customFilterActive && t("جميع الأوقات")}
                             {viewType === "daily" &&
                                 !customFilterActive &&
                                 t("اليوم")}
@@ -502,7 +619,14 @@ export default function Schedules() {
                     <span>
                         {t("عدد النتائج:")} {filteredEvents.length}
                     </span>
-
+                    {filteredEvents.length > 0 && (
+                        <>
+                            <span className="mx-2">•</span>
+                            <span>
+                                {t("عرض:")} {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredEvents.length)} {t("من")} {filteredEvents.length}
+                            </span>
+                        </>
+                    )}
                     {customFilterActive && (
                         <button
                             onClick={resetFilter}
@@ -542,7 +666,7 @@ export default function Schedules() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                            {filteredEvents.map((event, idx) => (
+                            {currentItems.map((event, idx) => (
                                 <tr
                                     key={event.id}
                                     className={`transition-colors duration-200 ${
@@ -552,7 +676,7 @@ export default function Schedules() {
                                     } hover:bg-gray-100 dark:hover:bg-gray-600`}
                                 >
                                     <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">
-                                        {idx + 1}
+                                        {indexOfFirstItem + idx + 1}
                                     </td>
                                     <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-200 font-medium">
                                         {event.title}
@@ -561,18 +685,18 @@ export default function Schedules() {
                                         {formatDate(event.date)}
                                     </td>
                                     <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300 max-w-sm whitespace-normal break-words">
-                                         <button onClick={() => openDescriptionModal(event.description)} className="px-3 py-1 flex gap-2  bg-primary text-white rounded hover:bg-primary-dark text-sm">
-                                                    عرض وصف المهمة
+                                        <button 
+                                            onClick={() => openDescriptionModal(event.description)} 
+                                            className="px-3 py-1 flex gap-2 bg-primary text-white rounded hover:bg-primary-dark text-sm"
+                                        >
+                                            عرض وصف النشاط
                                         </button>
-
                                     </td>
                                     <td className="px-4 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 text-center">
-                                        <div className="flex justify-center space-x-2 gap-2">
-                                            {(auth.user.member.add_events === 1 || auth.user.role === 'superadmin')
-                                                 && (
+                                        <div className="flex justify-center space-x-2 gap-2 ">
+                                            {canAddEvents && (
                                                 <>
-                                                    {event.option ===
-                                                        "select" && (
+                                                    {event.option === "select" && (
                                                         <>
                                                             <button
                                                                 onClick={() =>
@@ -656,9 +780,8 @@ export default function Schedules() {
                                                             <div className="flex gap-2">
                                                                 <button
                                                                     onClick={() =>
-                                                                        handleAttend(
-                                                                            event.id,
-                                                                            "attending"
+                                                                        handleAttendClick(
+                                                                            event.id
                                                                         )
                                                                     }
                                                                     className="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition-colors flex items-center gap-1"
@@ -668,9 +791,8 @@ export default function Schedules() {
                                                                 </button>
                                                                 <button
                                                                     onClick={() =>
-                                                                        handleAttend(
-                                                                            event.id,
-                                                                            "apologizing"
+                                                                        handleApologizeClick(
+                                                                            event.id
                                                                         )
                                                                     }
                                                                     className="px-3 py-1 bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200 rounded-lg hover:bg-red-200 dark:hover:bg-red-800 transition-colors flex items-center gap-1"
@@ -696,7 +818,37 @@ export default function Schedules() {
                     )}
                 </div>
 
-                {/* Calendar Modal for Day Selection */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => paginate(currentPage - 1)}
+                                disabled={currentPage === 1}
+                                className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
+                            >
+                                <ChevronRightIcon className="h-4 w-4" />
+                                {t("السابق")}
+                            </button>
+                            
+                            <div className="flex items-center gap-1 mx-2">
+                                {renderPageNumbers()}
+                            </div>
+
+                            <button
+                                onClick={() => paginate(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                                className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
+                            >
+                                {t("التالي")}
+                                <ChevronLeftIcon className="h-4 w-4" />
+                            </button>
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                            {t("صفحة")} {currentPage} {t("من")} {totalPages}
+                        </div>
+                    </div>
+                )}
+
                 {calendarModal === "custom" && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-sm w-full animate-fade-in-up">
@@ -795,7 +947,6 @@ export default function Schedules() {
                     </div>
                 )}
 
-                {/* Calendar Modal for Month Selection */}
                 {calendarModal === "month-custom" && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-up">
@@ -1048,7 +1199,6 @@ export default function Schedules() {
                     </div>
                 )}
 
-                {/* Edit Event Modal */}
                 {editModal && selectedEvent && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-up">
@@ -1175,7 +1325,6 @@ export default function Schedules() {
                     </div>
                 )}
 
-                {/* Delete Event Modal */}
                 {deleteModal && selectedEvent && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-up">
@@ -1217,7 +1366,6 @@ export default function Schedules() {
                     </div>
                 )}
 
-                {/* Members List Modal */}
                 {attendingModal && selectedEvent && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-up">
@@ -1412,6 +1560,19 @@ export default function Schedules() {
                         </div>
                     </div>
                 )}
+
+                <ConfirmModal
+                    isOpen={confirmModal.isOpen}
+                    onClose={closeConfirmModal}
+                    onConfirm={confirmModal.onConfirm}
+                    title={confirmModal.title}
+                    message={confirmModal.message}
+                    confirmText={confirmModal.confirmText}
+                    confirmColor={confirmModal.confirmColor}
+                    icon={confirmModal.icon}
+                    loading={confirmModal.loading}
+                    iconColor={confirmModal.iconColor}
+                />
             </div>
         </AdminLayout>
     );

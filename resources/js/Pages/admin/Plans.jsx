@@ -16,7 +16,7 @@ const emptyCouponForm = {
     plan_id: "",
     price_in_egp: "",
     price_outside_egp: "",
-    plan:"monthly"
+    plan: "monthly"
 };
 
 export default function Plans() {
@@ -35,9 +35,12 @@ export default function Plans() {
     const [selectedCoupon, setSelectedCoupon] = useState(null);
     const [couponFormData, setCouponFormData] = useState(emptyCouponForm);
     const [plansFormData, setPlansFormData] = useState({
-        basic: { price_in_egp: "", price_outside_egp: "" ,price_year_in_egp:"",price_year_outside_egp:"" },
-        premium: { price_in_egp: "", price_outside_egp: "",price_year_in_egp:"",price_year_outside_egp:"" },
-        vip: { price_in_egp: "", price_outside_egp: "",price_year_in_egp:"",price_year_outside_egp:"" }
+        advanced: { 
+            price_in_egp: "", 
+            price_outside_egp: "",
+            price_year_in_egp: "",
+            price_year_outside_egp: "" 
+        }
     });
 
     useEffect(() => {
@@ -76,7 +79,7 @@ export default function Plans() {
                 plan_id: couponFormData.plan_id,
                 price_in_egp: couponFormData.price_in_egp,
                 price_outside_egp: couponFormData.price_outside_egp,
-                plan:couponFormData.plan
+                plan: couponFormData.plan
             });
 
             if (response.data.success) {
@@ -109,7 +112,7 @@ export default function Plans() {
                 plan_id: couponFormData.plan_id,
                 price_in_egp: couponFormData.price_in_egp,
                 price_outside_egp: couponFormData.price_outside_egp,
-                plan:couponFormData.plan
+                plan: couponFormData.plan
             });
 
             if (response.data.success) {
@@ -158,10 +161,22 @@ export default function Plans() {
         try {
             const updates = [];
             for (const [planName, planData] of Object.entries(plansFormData)) {
-                const plan = plans.find(p => p.name === planName);
-                console.log(planName);
+                // البحث عن الباقة بالاسم أو إنشاؤها إذا لم توجد
+                let plan = plans.find(p => p.name === planName);
+                
                 if (plan) {
+                    // تحديث الباقة الموجودة
                     const response = await axios.put(`${app_url}/plans/${plan.id}`, {
+                        name: planName,
+                        price_in_egp: planData.price_in_egp,
+                        price_outside_egp: planData.price_outside_egp,
+                        price_year_in_egp: planData.price_year_in_egp,
+                        price_year_outside_egp: planData.price_year_outside_egp
+                    });
+                    updates.push(response);
+                } else {
+                    // إنشاء باقة جديدة إذا لم توجد
+                    const response = await axios.post(`${app_url}/plans`, {
                         name: planName,
                         price_in_egp: planData.price_in_egp,
                         price_outside_egp: planData.price_outside_egp,
@@ -178,7 +193,7 @@ export default function Plans() {
                 closeModal();
                 showAllPlans();
             } else {
-                console.error(t("فشل في تحديث بعض الباقات"));
+                console.error(t("فشل في تحديث الباقات"));
             }
         } catch (error) {
             if (error.response && error.response.data && error.response.data.errors) {
@@ -192,7 +207,12 @@ export default function Plans() {
     };
 
     const openAddCouponModal = () => {
-        setCouponFormData(emptyCouponForm);
+        // تعيين الباقة المتقدمة كقيمة افتراضية
+        const advancedPlan = plans.find(p => p.name === "advanced");
+        setCouponFormData({
+            ...emptyCouponForm,
+            plan_id: advancedPlan ? advancedPlan.id : ""
+        });
         setErrors({});
         setAddCouponModalOpen(true);
     };
@@ -204,7 +224,7 @@ export default function Plans() {
             plan_id: coupon.plan_id,
             price_in_egp: coupon.price_in_egp,
             price_outside_egp: coupon.price_outside_egp,
-            plan:coupon.plan
+            plan: coupon.plan
         });
         setErrors({});
         setEditCouponModalOpen(true);
@@ -216,16 +236,29 @@ export default function Plans() {
     };
 
     const openEditPlansModal = () => {
-        const newPlansFormData = {};
-        plans.forEach(plan => {
-            newPlansFormData[plan.name] = {
-                price_in_egp: plan.price_in_egp,
-                price_outside_egp: plan.price_outside_egp,
-                price_year_in_egp: plan.price_year_in_egp,
-                price_year_outside_egp: plan.price_year_outside_egp,
-            };
-        });
-        setPlansFormData(newPlansFormData);
+        // التأكد من وجود الباقة المتقدمة
+        const advancedPlan = plans.find(p => p.name === "advanced");
+        
+        if (advancedPlan) {
+            setPlansFormData({
+                advanced: {
+                    price_in_egp: advancedPlan.price_in_egp || "",
+                    price_outside_egp: advancedPlan.price_outside_egp || "",
+                    price_year_in_egp: advancedPlan.price_year_in_egp || "",
+                    price_year_outside_egp: advancedPlan.price_year_outside_egp || "",
+                }
+            });
+        } else {
+            // إذا لم توجد الباقة، نضع قيم فارغة
+            setPlansFormData({
+                advanced: {
+                    price_in_egp: "",
+                    price_outside_egp: "",
+                    price_year_in_egp: "",
+                    price_year_outside_egp: "",
+                }
+            });
+        }
         setErrors({});
         setEditPlansModalOpen(true);
     };
@@ -267,9 +300,7 @@ export default function Plans() {
         return null;
     };
 
-    const basicPlan = plans.find(plan => plan.name === "basic");
-    const premiumPlan = plans.find(plan => plan.name === "premium");
-    const vipPlan = plans.find(plan => plan.name === "vip");
+    const advancedPlan = plans.find(plan => plan.name === "advanced");
 
     return (
         <AdminLayout auth={auth}>
@@ -291,7 +322,7 @@ export default function Plans() {
                             className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                         >
                             <PencilIcon className="h-4 w-4 ml-1.5" />
-                            {t("تعديل الباقات")}
+                            {t("تعديل الباقة المتقدمة")}
                         </button>
                     </div>
                 </div>
@@ -303,7 +334,7 @@ export default function Plans() {
                             <tr>
                                 <th className="px-6 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">{t("كود الكوبون")}</th>
                                 <th className="px-6 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">{t("الباقة المستهدفة")}</th>
-                                <th className="px-6 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">{t("نوع الباقة ")}</th>
+                                <th className="px-6 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">{t("نوع الباقة")}</th>
                                 <th className="px-6 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">{t("السعر (داخل مصر)")}</th>
                                 <th className="px-6 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">{t("السعر (خارج مصر)")}</th>
                                 <th className="px-6 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">{t("الإجراءات")}</th>
@@ -338,35 +369,37 @@ export default function Plans() {
                     )}
                 </div>
 
-
+                {/* Advanced Plan Details */}
                 <div className="mt-10">
-                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-4">{t("أسعار الباقات الحالية")}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {basicPlan && (
-                            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                <h4 className="font-semibold text-gray-800 dark:text-gray-200">{t("الباقة الأساسية (Basic)")}</h4>
-                                <p className="text-gray-600 dark:text-gray-300">{t(" الشهرية داخل مصر :")} {basicPlan.price_in_egp}</p>
-                                <p className="text-gray-600 dark:text-gray-300">{t(" الشهرية خارج مصر:")} {basicPlan.price_outside_egp}</p>
-                                <p className="text-gray-600 dark:text-gray-300">{t(" السنوية داخل مصر :")} {basicPlan.price_year_in_egp}</p>
-                                <p className="text-gray-600 dark:text-gray-300">{t(" السنوية خارج مصر:")} {basicPlan.price_year_outside_egp}</p>
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-4">{t("أسعار الباقة المتقدمة الحالية")}</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                        {advancedPlan ? (
+                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 p-6 rounded-lg border-2 border-blue-200 dark:border-blue-500">
+                                <h4 className="font-semibold text-xl text-gray-800 dark:text-gray-200 mb-3">{t("الباقة المتقدمة (Advanced)")}</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow">
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">{t("الشهرية داخل مصر")}</p>
+                                        <p className="text-lg font-bold text-gray-800 dark:text-gray-200">{advancedPlan.price_in_egp} {t("ج.م")}</p>
+                                    </div>
+                                    <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow">
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">{t("الشهرية خارج مصر")}</p>
+                                        <p className="text-lg font-bold text-gray-800 dark:text-gray-200">${advancedPlan.price_outside_egp}</p>
+                                    </div>
+                                    <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow">
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">{t("السنوية داخل مصر")}</p>
+                                        <p className="text-lg font-bold text-gray-800 dark:text-gray-200">{advancedPlan.price_year_in_egp} {t("ج.م")}</p>
+                                    </div>
+                                    <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow">
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">{t("السنوية خارج مصر")}</p>
+                                        <p className="text-lg font-bold text-gray-800 dark:text-gray-200">${advancedPlan.price_year_outside_egp}</p>
+                                    </div>
+                                </div>
                             </div>
-                        )}
-                        {premiumPlan && (
-                            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                <h4 className="font-semibold text-gray-800 dark:text-gray-200">{t("الباقة المتوسطة (Premium)")}</h4>
-                                <p className="text-gray-600 dark:text-gray-300">{t(" الشهرية داخل مصر:")} {premiumPlan.price_in_egp}</p>
-                                <p className="text-gray-600 dark:text-gray-300">{t(" الهشرية خارج مصر:")} {premiumPlan.price_outside_egp}</p>
-                                <p className="text-gray-600 dark:text-gray-300">{t(" السنوية داخل مصر :")} {premiumPlan.price_year_in_egp}</p>
-                                <p className="text-gray-600 dark:text-gray-300">{t(" السنوية خارج مصر:")} {premiumPlan.price_year_outside_egp}</p>
-                            </div>
-                        )}
-                        {vipPlan && (
-                            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                <h4 className="font-semibold text-gray-800 dark:text-gray-200">{t("الباقة المتقدمة (VIP)")}</h4>
-                                <p className="text-gray-600 dark:text-gray-300">{t(" الشهرية داخل مصر:")} {vipPlan.price_in_egp}</p>
-                                <p className="text-gray-600 dark:text-gray-300">{t(" الهشرية خارج مصر:")} {vipPlan.price_outside_egp}</p>
-                                <p className="text-gray-600 dark:text-gray-300">{t(" السنوية داخل مصر :")} {vipPlan.price_year_in_egp}</p>
-                                <p className="text-gray-600 dark:text-gray-300">{t(" السنوية خارج مصر:")} {vipPlan.price_year_outside_egp}</p>
+                        ) : (
+                            <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-lg border-2 border-yellow-200 dark:border-yellow-500">
+                                <p className="text-yellow-800 dark:text-yellow-200">
+                                    {t("لم يتم إعداد الباقة المتقدمة بعد. يرجى النقر على زر 'تعديل الباقة المتقدمة' لإضافتها.")}
+                                </p>
                             </div>
                         )}
                     </div>
@@ -404,23 +437,22 @@ export default function Plans() {
                             >
                                 <option value="">{t("اختر الباقة")}</option>
                                 {plans.map(plan => (
-                                    <option key={plan.id} value={plan.id}>{plan.name}</option>
+                                    <option key={plan.id} value={plan.id}>{plan.name === "advanced" ? t("الباقة المتقدمة") : plan.name}</option>
                                 ))}
                             </select>
                             {renderError('plan_id')}
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t(" نوع الباقة")}</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("نوع الباقة")}</label>
                             <select
                                 value={couponFormData.plan}
                                 onChange={(e) => setCouponFormData({ ...couponFormData, plan: e.target.value })}
                                 className={`w-full px-8 py-2 border rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
-                                    errors.plan_id ? 'border-red-500' : 'border-gray-300 dark:border-gray-500'
+                                    errors.plan ? 'border-red-500' : 'border-gray-300 dark:border-gray-500'
                                 }`}
                             >
-                                <option  value={"monthly"}>{"monthly"}</option>
-                                <option  value={"yearly"}>{"yearly"}</option>
-
+                                <option value="monthly">{t("شهري")}</option>
+                                <option value="yearly">{t("سنوي")}</option>
                             </select>
                             {renderError('plan')}
                         </div>
@@ -453,212 +485,91 @@ export default function Plans() {
                     </FormModal>
                 )}
 
-                {/* Edit Plans Modal */}
+                {/* Edit Plans Modal - مخصص للباقة المتقدمة فقط */}
                 {isEditPlansModalOpen && (
                     <FormModal
-                        title={t("تعديل أسعار الباقات")}
+                        title={t("تعديل أسعار الباقة المتقدمة")}
                         onClose={closeModal}
                         onSave={handleSavePlans}
                         isLoading={isLoading}
                         t={t}
                     >
-                        <div className="space-y-4 overflow-auto">
-                            {/* Basic Plan */}
-                            <div >
-                                <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">{t("الباقة الأساسية (Basic)")}</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg ">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("السعر الشهرى داخل مصر")}</label>
-                                        <input
-                                            type="number"
-                                            value={plansFormData.basic?.price_in_egp || ""}
-                                            onChange={(e) => setPlansFormData({
-                                                ...plansFormData,
-                                                basic: {
-                                                    ...plansFormData.basic,
-                                                    price_in_egp: e.target.value
-                                                }
-                                            })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("السعر الشهرى خارج مصر")}</label>
-                                        <input
-                                            type="number"
-                                            value={plansFormData.basic?.price_outside_egp || ""}
-                                            onChange={(e) => setPlansFormData({
-                                                ...plansFormData,
-                                                basic: {
-                                                    ...plansFormData.basic,
-                                                    price_outside_egp: e.target.value
-                                                }
-                                            })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("السعر السنوى داخل مصر")}</label>
-                                        <input
-                                            type="number"
-                                            value={plansFormData.basic?.price_year_in_egp || ""}
-                                            onChange={(e) => setPlansFormData({
-                                                ...plansFormData,
-                                                basic: {
-                                                    ...plansFormData.basic,
-                                                    price_year_in_egp: e.target.value
-                                                }
-                                            })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("السعر السنوى خارج مصر")}</label>
-                                        <input
-                                            type="number"
-                                            value={plansFormData.basic?.price_year_outside_egp || ""}
-                                            onChange={(e) => setPlansFormData({
-                                                ...plansFormData,
-                                                basic: {
-                                                    ...plansFormData.basic,
-                                                    price_year_outside_egp: e.target.value
-                                                }
-                                            })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Premium Plan */}
+                        <div className="space-y-4">
                             <div>
-                                <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">{t("الباقة المتوسطة (Premium)")}</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                <h4 className="font-semibold text-xl text-gray-800 dark:text-gray-200 mb-4 text-center">
+                                    {t("الباقة المتقدمة (Advanced)")}
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 rounded-lg">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("السعر الشهرى داخل مصر")}</label>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            {t("السعر الشهري داخل مصر")}
+                                        </label>
                                         <input
                                             type="number"
-                                            value={plansFormData.premium?.price_in_egp || ""}
+                                            value={plansFormData.advanced?.price_in_egp || ""}
                                             onChange={(e) => setPlansFormData({
                                                 ...plansFormData,
-                                                premium: {
-                                                    ...plansFormData.premium,
+                                                advanced: {
+                                                    ...plansFormData.advanced,
                                                     price_in_egp: e.target.value
                                                 }
                                             })}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            placeholder={t("أدخل السعر")}
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("السعر الشهرى خارج مصر")}</label>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            {t("السعر الشهري خارج مصر")}
+                                        </label>
                                         <input
                                             type="number"
-                                            value={plansFormData.premium?.price_outside_egp || ""}
+                                            value={plansFormData.advanced?.price_outside_egp || ""}
                                             onChange={(e) => setPlansFormData({
                                                 ...plansFormData,
-                                                premium: {
-                                                    ...plansFormData.premium,
+                                                advanced: {
+                                                    ...plansFormData.advanced,
                                                     price_outside_egp: e.target.value
                                                 }
                                             })}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            placeholder={t("أدخل السعر")}
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("السعر السنوى داخل مصر")}</label>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            {t("السعر السنوي داخل مصر")}
+                                        </label>
                                         <input
                                             type="number"
-                                            value={plansFormData.premium?.price_year_in_egp || ""}
+                                            value={plansFormData.advanced?.price_year_in_egp || ""}
                                             onChange={(e) => setPlansFormData({
                                                 ...plansFormData,
-                                                premium: {
-                                                    ...plansFormData.premium,
+                                                advanced: {
+                                                    ...plansFormData.advanced,
                                                     price_year_in_egp: e.target.value
                                                 }
                                             })}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            placeholder={t("أدخل السعر")}
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("السعر السنوى خارج مصر")}</label>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            {t("السعر السنوي خارج مصر")}
+                                        </label>
                                         <input
                                             type="number"
-                                            value={plansFormData.premium?.price_year_outside_egp || ""}
+                                            value={plansFormData.advanced?.price_year_outside_egp || ""}
                                             onChange={(e) => setPlansFormData({
                                                 ...plansFormData,
-                                                premium: {
-                                                    ...plansFormData.premium,
+                                                advanced: {
+                                                    ...plansFormData.advanced,
                                                     price_year_outside_egp: e.target.value
                                                 }
                                             })}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* VIP Plan */}
-                            <div>
-                                <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">{t("الباقة المتقدمة (VIP)")}</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("السعر الشهرى داخل مصر")}</label>
-                                        <input
-                                            type="number"
-                                            value={plansFormData.vip?.price_in_egp || ""}
-                                            onChange={(e) => setPlansFormData({
-                                                ...plansFormData,
-                                                vip: {
-                                                    ...plansFormData.vip,
-                                                    price_in_egp: e.target.value
-                                                }
-                                            })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("السعر الشهرى خارج مصر")}</label>
-                                        <input
-                                            type="number"
-                                            value={plansFormData.vip?.price_outside_egp || ""}
-                                            onChange={(e) => setPlansFormData({
-                                                ...plansFormData,
-                                                vip: {
-                                                    ...plansFormData.vip,
-                                                    price_outside_egp: e.target.value
-                                                }
-                                            })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("السعر السنوى داخل مصر")}</label>
-                                        <input
-                                            type="number"
-                                            value={plansFormData.vip?.price_year_in_egp || ""}
-                                            onChange={(e) => setPlansFormData({
-                                                ...plansFormData,
-                                                vip: {
-                                                    ...plansFormData.vip,
-                                                    price_year_in_egp: e.target.value
-                                                }
-                                            })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("السعر السنوى خارج مصر")}</label>
-                                        <input
-                                            type="number"
-                                            value={plansFormData.vip?.price_year_outside_egp || ""}
-                                            onChange={(e) => setPlansFormData({
-                                                ...plansFormData,
-                                                vip: {
-                                                    ...plansFormData.vip,
-                                                    price_year_outside_egp: e.target.value
-                                                }
-                                            })}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            placeholder={t("أدخل السعر")}
                                         />
                                     </div>
                                 </div>
@@ -703,10 +614,10 @@ export default function Plans() {
 }
 
 // Generic Modal Component for Forms
-function FormModal({ title, children, onClose, onSave, isLoading = false,t }) {
+function FormModal({ title, children, onClose, onSave, isLoading = false, t }) {
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 ">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full h-full overflow-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-auto">
                 <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
                     <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">{title}</h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300">

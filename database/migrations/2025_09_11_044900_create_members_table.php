@@ -11,8 +11,8 @@ return new class extends Migration
         Schema::create('members', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('phone');
-            $table->enum('role',['manager','member']);
+            $table->string('phone')->nullable();
+            $table->enum('role',['admin','member']);
             $table->foreignId('cycle_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
             $table->integer('rating')->default(0);

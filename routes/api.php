@@ -1,10 +1,6 @@
 <?php
 
-use App\Http\Controllers\RetailFlow\CustomerRetailFlowController;
-use App\Http\Controllers\RetailFlow\InvoiceRetailFlowController;
-use App\Http\Controllers\RetailFlow\ProductRetailFlowController;
 use App\Http\Controllers\RetailFlow\UserManagementController;
-use App\Http\Controllers\RentsController;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -14,19 +10,12 @@ use App\Http\Controllers\LibraryController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\CycleController;
 use App\Http\Controllers\AnnouncementController;
-use App\Http\Controllers\FawryController;
 use App\Http\Controllers\MessageController;
-use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\StripeController;
 use App\Http\Controllers\TaskController;
-use App\Http\Controllers\WhatsAppController;
-use App\Models\CustomerRetailFlow;
 use App\Models\Notification;
-use App\Models\WhatsappMessage;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Application;
-use App\Http\Controllers\PaymobController;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 

@@ -33,12 +33,20 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
-        if(Auth::user()->system_type === 'clubs'){
-            return redirect('/clubs');
-        }else if(Auth::user()->system_type === 'manager'){
+
+
+        $user = Auth::user();
+
+        if (! $user->hasVerifiedEmail()) {
+
+            $user->sendEmailVerificationNotification();
+
+            return redirect()->route('verification.notice');
+        }
+        if(Auth::user()->role === 'superadmin'){
             return redirect('/admin');
-        }else if(Auth::user()->system_type === 'retail' || Auth::user()->system_type === 'services'||Auth::user()->system_type === 'education'||Auth::user()->system_type === 'realEstate'  ||Auth::user()->system_type === 'delivery'||Auth::user()->system_type === 'travels' || Auth::user()->system_type === 'gym' || Auth::user()->system_type === 'hotel'){
-            return redirect('/retailFlow');
+        }else if(Auth::user()->role === 'admin' || Auth::user()->role === 'user' ){
+            return redirect('/clubs');
         }else{
             return redirect('/');
         }

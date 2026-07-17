@@ -29,7 +29,9 @@
         </p>
 
         <div style="text-align: center; margin-top: 30px; padding: 15px; background: #f0f0f0;">
-            <p style="margin: 0; color: #555;">© {{ date('Y') }} MySystem. جميع الحقوق محفوظة.</p>
+            <p style="margin: 0; color: #555;">          
+                © {{ date('Y') }} TeamAssign Inc. جميع الحقوق محفوظة
+           </p>
         </div>
     </div>
 </body>

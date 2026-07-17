@@ -36,11 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 Request::HEADER_X_FORWARDED_AWS_ELB
         );
     })->withSchedule(function (Illuminate\Console\Scheduling\Schedule $schedule) {
-        $schedule->command('subscriptions:expire')->daily();
         $schedule->command('app:task-commands')->daily();
-        $schedule->command('rents:remind')->dailyAt('09:00');
-        $schedule->command('files:delete-old')->daily();
-        $schedule->command('tasks:delete-old-files')->daily();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

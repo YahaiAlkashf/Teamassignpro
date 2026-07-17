@@ -1,0 +1,371 @@
+
+import React, { useEffect, useState } from "react";
+import { XMarkIcon } from "@heroicons/react/24/outline";
+import { useTranslation } from "react-i18next";
+import { usePage } from "@inertiajs/react";
+export default function MemberModal({
+    title,
+    member,
+    setMember,
+    handleSave,
+    closeModal,
+    errors,
+    isEdit = false
+}) {
+    const { t } = useTranslation();
+    const [cycles, setCycles] = useState([]);
+    const { app_url, auth } = usePage().props;
+    const fetchCycles = async () => {
+        try {
+            const response = await axios.get(`${app_url}/cycles`);
+            setCycles(response.data.cycles || []);
+        } catch (error) {
+            console.error("Error fetching cycles:", error);
+        }
+    };
+    useEffect(()=>{
+        fetchCycles();
+    },[])
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-end z-50">
+            <div className="bg-white dark:bg-gray-800 overflow-y-auto h-full shadow-2xl max-w-md w-full p-6 space-y-4 animate-slide-in-right">
+                <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-2">
+                    <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">
+                        {title}
+                    </h3>
+                    <button
+                        onClick={closeModal}
+                        className="text-gray-400 hover:text-gray-600 dark:text-gray-300 transition-transform hover:rotate-90"
+                    >
+                        <XMarkIcon className="h-6 w-6" />
+                    </button>
+                </div>
+
+            
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {t("الاسم")} <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        value={member.name || ""}
+                        onChange={(e) => setMember({ ...member, name: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 focus:scale-[1.02]"
+                        placeholder={t("أدخل الاسم")}
+                    />
+                    {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name[0]}</p>}
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {t("البريد الإلكتروني")} <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="email"
+                        value={member.email || ""}
+                        onChange={(e) => setMember({ ...member, email: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 focus:scale-[1.02]"
+                        placeholder={t("أدخل البريد الإلكتروني")}
+                    />
+                    {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email[0]}</p>}
+                </div>
+
+               
+                {!isEdit && (
+                    <>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                {t("كلمة المرور")} <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="password"
+                                value={member.password || ""}
+                                onChange={(e) => setMember({ ...member, password: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 focus:scale-[1.02]"
+                                placeholder={t("أدخل كلمة المرور")}
+                            />
+                            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password[0]}</p>}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                {t("تأكيد كلمة المرور")} <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="password"
+                                value={member.password_confirmation || ""}
+                                onChange={(e) => setMember({ ...member, password_confirmation: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 focus:scale-[1.02]"
+                                placeholder={t("أعد إدخال كلمة المرور")}
+                            />
+                        </div>
+                    </>
+                )}
+
+                {isEdit && (
+                    <>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                {t("كلمة المرور الجديدة")}
+                                <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">
+                                    ({t("اتركها فارغة إذا لم ترد التغيير")})
+                                </span>
+                            </label>
+                            <input
+                                type="password"
+                                value={member.password || ""}
+                                onChange={(e) => setMember({ ...member, password: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 focus:scale-[1.02]"
+                                placeholder={t("أدخل كلمة المرور الجديدة")}
+                            />
+                            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password[0]}</p>}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                {t("تأكيد كلمة المرور الجديدة")}
+                            </label>
+                            <input
+                                type="password"
+                                value={member.password_confirmation || ""}
+                                onChange={(e) => setMember({ ...member, password_confirmation: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 focus:scale-[1.02]"
+                                placeholder={t("أعد إدخال كلمة المرور الجديدة")}
+                            />
+                        </div>
+                    </>
+                )}
+
+      
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {t("رقم الهاتف")}
+                    </label>
+                    <input
+                        type="text"
+                        value={member.phone || ""}
+                        onChange={(e) => setMember({ ...member, phone: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 focus:scale-[1.02]"
+                        placeholder={t("أدخل رقم الهاتف")}
+                    />
+                    {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone[0]}</p>}
+                </div>
+
+        
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {t("الرقم التعريفي (ID)")}
+                    </label>
+                    <input
+                        type="text"
+                        value={member.member_id || ""}
+                        onChange={(e) => setMember({ ...member, member_id: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 focus:scale-[1.02]"
+                        placeholder={t("أدخل الرقم التعريفي")}
+                    />
+                    {errors.member_id && <p className="text-red-500 text-xs mt-1">{errors.member_id[0]}</p>}
+                </div>
+
+               
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {t("القسم")}
+                    </label>
+                    <select
+                        value={member.cycle_id || ""}
+                        onChange={(e) => setMember({ ...member, cycle_id: e.target.value })}
+                        className="w-full px-8 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 focus:scale-[1.02]"
+                    >
+                        <option value="">{t("اختر القسم")}</option>
+                        {cycles?.map((cycle) => (
+                            <option key={cycle.id} value={cycle.id}>
+                                {cycle.name}
+                            </option>
+                        ))}
+                    </select>
+                    {errors.cycle_id && <p className="text-red-500 text-xs mt-1">{errors.cycle_id[0]}</p>}
+                </div>
+
+           
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {t("المسمى الوظيفي")}
+                    </label>
+                    <input
+                        type="text"
+                        value={member.jop_title || ""}
+                        onChange={(e) => setMember({ ...member, jop_title: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 focus:scale-[1.02]"
+                        placeholder={t("أدخل المسمى الوظيفي")}
+                    />
+                    {errors.jop_title && <p className="text-red-500 text-xs mt-1">{errors.jop_title[0]}</p>}
+                </div>
+
+                {/* التقييم */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {t("التقييم")} <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex items-center gap-3">
+                        <input
+                            type="range"
+                            min="0"
+                            max="5"
+                            step="1"
+                            value={member.rating || 0}
+                            onChange={(e) => setMember({ ...member, rating: parseInt(e.target.value) })}
+                            className="w-full transition-all duration-300 hover:scale-[1.02] accent-primary"
+                        />
+                        <span className="text-lg font-bold text-gray-700 dark:text-gray-300 min-w-[30px] text-center">
+                            {member.rating || 0}
+                        </span>
+                    </div>
+                    <div className="flex gap-1 mt-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                            <span
+                                key={star}
+                                className={`text-xl cursor-pointer transition-colors ${
+                                    star <= (member.rating || 0)
+                                        ? "text-yellow-400"
+                                        : "text-gray-300"
+                                }`}
+                                onClick={() => setMember({ ...member, rating: star })}
+                            >
+                                ★
+                            </span>
+                        ))}
+                    </div>
+                    {errors.rating && <p className="text-red-500 text-xs mt-1">{errors.rating[0]}</p>}
+                </div>
+
+                {/* الصلاحيات */}
+                <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        {t("الصلاحيات")}
+                    </h4>
+
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            checked={member?.manage_members || false}
+                            onChange={(e) => setMember({ ...member, manage_members: e.target.checked ? 1 : 0 })}
+                            className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                        />
+                        <label className="text-sm text-gray-700 dark:text-gray-300">
+                            {t("إدارة الأعضاء")}
+                        </label>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            checked={member?.add_tasks || false}
+                            onChange={(e) => setMember({ ...member, add_tasks: e.target.checked ? 1 : 0 })}
+                            className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                        />
+                        <label className="text-sm text-gray-700 dark:text-gray-300">
+                            {t("إضافة مهام")}
+                        </label>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            checked={member?.add_events || false}
+                            onChange={(e) => setMember({ ...member, add_events: e.target.checked ? 1 : 0 })}
+                            className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                        />
+                        <label className="text-sm text-gray-700 dark:text-gray-300">
+                            {t("إضافة فعاليات")}
+                        </label>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            checked={member?.add_library || false}
+                            onChange={(e) => setMember({ ...member, add_library: e.target.checked ? 1 : 0 })}
+                            className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                        />
+                        <label className="text-sm text-gray-700 dark:text-gray-300">
+                            {t("إضافة للمكتبة")}
+                        </label>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            checked={member?.add_advertisement || false}
+                            onChange={(e) => setMember({ ...member, add_advertisement: e.target.checked ? 1 : 0 })}
+                            className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                        />
+                        <label className="text-sm text-gray-700 dark:text-gray-300">
+                            {t("إدارة الإعلانات")}
+                        </label>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            checked={member?.manage_reports || false}
+                            onChange={(e) => setMember({ ...member, manage_reports: e.target.checked ? 1 : 0 })}
+                            className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                        />
+                        <label className="text-sm text-gray-700 dark:text-gray-300">
+                            {t("إدارة التقارير")}
+                        </label>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            checked={member?.manage_notes || false}
+                            onChange={(e) => setMember({ ...member, manage_notes: e.target.checked ? 1 : 0 })}
+                            className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                        />
+                        <label className="text-sm text-gray-700 dark:text-gray-300">
+                            {t("إدارة الملاحظات")}
+                        </label>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            checked={member?.manage_leaderboard || false}
+                            onChange={(e) => setMember({ ...member, manage_leaderboard: e.target.checked ? 1 : 0 })}
+                            className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                        />
+                        <label className="text-sm text-gray-700 dark:text-gray-300">
+                            {t("لوحة الشرف")}
+                        </label>
+                    </div>
+                </div>
+
+                {/* الأخطاء */}
+                {Object.keys(errors).length > 0 && (
+                    <div className="bg-red-100 text-red-700 p-3 rounded-lg text-sm">
+                        {Object.values(errors).flat().map((error, index) => (
+                            <p key={index}>• {error}</p>
+                        ))}
+                    </div>
+                )}
+
+                {/* أزرار التحكم */}
+                <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                        onClick={closeModal}
+                        className="flex-1 px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    >
+                        {t("إلغاء")}
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+                    >
+                        {t("حفظ")}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}

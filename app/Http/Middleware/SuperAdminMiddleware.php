@@ -17,7 +17,7 @@ class SuperAdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if(Auth::check() && Auth::user()->role="superadmin"){
+        if(Auth::check() && Auth::user()->role="admin"){
             return $next($request);
         }
         return response()->json(['error' => 'Unauthorized'], 403);

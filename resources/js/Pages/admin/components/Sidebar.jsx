@@ -41,7 +41,6 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             icon: Squares2X2Icon,
             path: "/admin/plans",
         },
-        { name: t("الربط بواتساب"), icon: ChatBubbleLeftIcon, path: "/admin/whatsapp" },
         {
             name: t("الاعدادات"),
             icon: Cog6ToothIcon,

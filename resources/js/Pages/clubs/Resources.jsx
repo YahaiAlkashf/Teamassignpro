@@ -12,12 +12,15 @@ import {
     DocumentIcon,
     ArrowDownTrayIcon,
     CloudArrowUpIcon,
+    ChevronLeftIcon,
+    ChevronRightIcon,
 } from "@heroicons/react/24/outline";
 import { useTranslation } from "react-i18next";
+import ConfirmModal from "./Components/ConfirmModal";
 
 export default function Library() {
-    const { app_url, auth } = usePage().props;
-        const { t } = useTranslation();
+    const { app_url, auth, permissions } = usePage().props;
+    const { t } = useTranslation();
     const [folders, setFolders] = useState([]);
     const [files, setFiles] = useState([]);
     const [currentFolder, setCurrentFolder] = useState(null);
@@ -32,6 +35,29 @@ export default function Library() {
     const [uploading, setUploading] = useState(false);
     const [errors, setErrors] = useState({});
     const [uploadFiles, setUploadFiles] = useState([]);
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const rowsPerPage = 10;
+
+    const [viewFileModal, setViewFileModal] = useState(false);
+    const [viewFileUrl, setViewFileUrl] = useState('');
+    const [viewFileName, setViewFileName] = useState('');
+
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        onConfirm: null,
+        title: '',
+        message: '',
+        confirmText: 'حذف',
+        confirmColor: 'bg-red-600 hover:bg-red-700',
+        icon: 'warning',
+        loading: false,
+        errorMessage: null,
+    });
+
+    const permission = permissions?.permissions;
+    const isAdmin = auth.user?.role === 'admin';
+    const canManageLibrary = isAdmin || permission?.add_library;
 
     const showAllFolders = async () => {
         try {
@@ -51,6 +77,7 @@ export default function Library() {
             const response = await axios.get(url);
             setFiles(response.data.files);
             setCurrentFolder(folderId);
+            setCurrentPage(1);
         } catch (error) {
             console.log(error);
         }
@@ -60,6 +87,49 @@ export default function Library() {
         showAllFolders();
         showFilesInFolder();
     }, []);
+
+    const indexOfLastItem = currentPage * rowsPerPage;
+    const indexOfFirstItem = indexOfLastItem - rowsPerPage;
+    const currentItems = files.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(files.length / rowsPerPage);
+
+    const paginate = (pageNumber) => {
+        if (pageNumber >= 1 && pageNumber <= totalPages) {
+            setCurrentPage(pageNumber);
+            const tableElement = document.querySelector('.overflow-x-auto');
+            if (tableElement) {
+                tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+    };
+
+    const renderPageNumbers = () => {
+        const pageNumbers = [];
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            pageNumbers.push(
+                <button
+                    key={i}
+                    onClick={() => paginate(i)}
+                    className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                        currentPage === i
+                            ? 'bg-primary text-white'
+                            : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                >
+                    {i}
+                </button>
+            );
+        }
+        return pageNumbers;
+    };
 
     const handleAddFolder = () => {
         setAddFolderModal(true);
@@ -89,14 +159,55 @@ export default function Library() {
         window.open(downloadUrl, '_blank');
     };
 
-    const handleDeleteFile = async (file) => {
-        if (window.confirm(t(`هل أنت متأكد من حذف الملف "${file.name}"؟`))) {
-            try {
-                await axios.delete(`${app_url}/library/files/${file.id}`);
-                showFilesInFolder(currentFolder);
-            } catch (error) {
-                console.log(error);
+    const handleViewFile = (file) => {
+        const viewUrl = `${app_url}/library/files/${file.id}/view`;
+        setViewFileUrl(viewUrl);
+        setViewFileName(file.name);
+        setViewFileModal(true);
+    };
+
+    const showConfirmDeleteFile = (file) => {
+        setConfirmModal({
+            isOpen: true,
+            onConfirm: () => handleDeleteFileConfirm(file),
+            title: t("هل أنت متأكد من حذف هذا الملف؟"),
+            message: `سيتم حذف الملف "${file.name}" نهائياً. هذا الإجراء لا يمكن التراجع عنه.`,
+            confirmText: t("حذف"),
+            confirmColor: "bg-red-600 hover:bg-red-700",
+            icon: "warning",
+            loading: false,
+            errorMessage: null,
+        });
+    };
+
+    const closeConfirmModal = () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false, errorMessage: null }));
+    };
+
+    const handleDeleteFileConfirm = async (file) => {
+        setConfirmModal(prev => ({ ...prev, loading: true, errorMessage: null }));
+        try {
+            await axios.delete(`${app_url}/library/files/${file.id}`);
+            closeConfirmModal();
+            showFilesInFolder(currentFolder);
+        } catch (error) {
+            console.error("Error deleting file:", error);
+            let errorMessage = t("حدث خطأ أثناء حذف الملف");
+            
+            if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.response?.data?.errors) {
+                const errors = Object.values(error.response.data.errors).flat();
+                errorMessage = errors.join('\n');
+            } else if (error.message) {
+                errorMessage = error.message;
             }
+            
+            setConfirmModal(prev => ({ 
+                ...prev, 
+                loading: false,
+                errorMessage: errorMessage
+            }));
         }
     };
 
@@ -105,6 +216,7 @@ export default function Library() {
         setRenameFolderModal(false);
         setDeleteFolderModal(false);
         setUploadModal(false);
+        setViewFileModal(false);
         setSelectedFolder(null);
         setSelectedFile(null);
         setNewFolderName("");
@@ -112,6 +224,8 @@ export default function Library() {
         setUploading(false);
         setErrors({});
         setUploadFiles([]);
+        setViewFileUrl('');
+        setViewFileName('');
     };
 
     const handleSaveAddFolder = async () => {
@@ -187,7 +301,29 @@ export default function Library() {
     };
 
     const handleFileSelect = (e) => {
-        setUploadFiles(Array.from(e.target.files));
+        const selectedFiles = Array.from(e.target.files);
+        const maxSize = 10 * 1024 * 1024;
+        const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'ppt', 'pptx', 'zip', 'rar', '7z'];
+        
+        const validFiles = [];
+        const errorFiles = [];
+
+        selectedFiles.forEach(file => {
+            const extension = file.name.split('.').pop().toLowerCase();
+            if (file.size > maxSize) {
+                errorFiles.push(`${file.name} (حجمه كبير جداً، الحد الأقصى 10 ميجابايت)`);
+            } else if (!allowedExtensions.includes(extension)) {
+                errorFiles.push(`${file.name} (نوع غير مسموح)`);
+            } else {
+                validFiles.push(file);
+            }
+        });
+
+        if (errorFiles.length > 0) {
+            alert(`الملفات التالية غير صالحة:\n${errorFiles.join('\n')}`);
+        }
+
+        setUploadFiles(validFiles);
     };
 
     const formatFileSize = (bytes) => {
@@ -201,6 +337,29 @@ export default function Library() {
     const formatDate = (dateString) => {
         const options = { year: "numeric", month: "long", day: "numeric" };
         return new Date(dateString).toLocaleDateString("ar-EG", options);
+    };
+
+    const getFileIcon = (file) => {
+        const extension = file.extension?.toLowerCase() || '';
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+        const pdfExtensions = ['pdf'];
+        const documentExtensions = ['doc', 'docx', 'xls', 'xlsx', 'txt'];
+        const presentationExtensions = ['ppt', 'pptx'];
+        const archiveExtensions = ['zip', 'rar', '7z'];
+
+        if (imageExtensions.includes(extension)) {
+            return <img src={`${app_url}/storage/${file.path}`} className="h-8 w-8 object-cover rounded" alt={file.name} />;
+        } else if (pdfExtensions.includes(extension)) {
+            return <span className="text-red-500 text-2xl">📄</span>;
+        } else if (documentExtensions.includes(extension)) {
+            return <span className="text-blue-500 text-2xl">📝</span>;
+        } else if (presentationExtensions.includes(extension)) {
+            return <span className="text-orange-500 text-2xl">📊</span>;
+        } else if (archiveExtensions.includes(extension)) {
+            return <span className="text-yellow-500 text-2xl">📦</span>;
+        } else {
+            return <DocumentIcon className="h-8 w-8 text-gray-400" />;
+        }
     };
 
     return (
@@ -220,10 +379,10 @@ export default function Library() {
                                         : "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
                                 }`}
                             >
-                                {t("الكل")}
+                                {t("المجلد الرئيسى")}
                             </button>
                         </div>
-                        {(auth.user?.member?.add_library === 1 || auth.user.role === 'superadmin') && (
+                        {canManageLibrary && (
                             <>
                                  <button
                                     onClick={handleAddFolder}
@@ -241,7 +400,6 @@ export default function Library() {
                                 </button>
                             </>
                         )}
-
                     </div>
                 </div>
 
@@ -256,7 +414,6 @@ export default function Library() {
                     {t("عدد الملفات:")} {files.length}
                 </div>
 
-                {/* show folders*/}
                 <div className="mb-6">
                     <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">{t("المجلدات")}</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -276,28 +433,28 @@ export default function Library() {
                                             </p>
                                         </div>
                                     </div>
-                            {(auth.user?.member?.add_library === 1 || auth.user.role === 'superadmin') && (
-                                    <div className="flex space-x-1">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleRenameFolder(folder);
-                                            }}
-                                            className="p-1 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900 rounded"
-                                        >
-                                            <PencilIcon className="h-4 w-4" />
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDeleteFolder(folder);
-                                            }}
-                                            className="p-1 text-red-600 hover:bg-red-100 dark:hover:bg-red-900 rounded"
-                                        >
-                                            <TrashIcon className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                            )}
+                                    {canManageLibrary && (
+                                        <div className="flex space-x-1">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleRenameFolder(folder);
+                                                }}
+                                                className="p-1 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900 rounded"
+                                            >
+                                                <PencilIcon className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteFolder(folder);
+                                                }}
+                                                className="p-1 text-red-600 hover:bg-red-100 dark:hover:bg-red-900 rounded"
+                                            >
+                                                <TrashIcon className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -309,16 +466,25 @@ export default function Library() {
                     </div>
                 </div>
 
-                {/* show files  */}
                 <div>
                     <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">{t("الملفات")}</h4>
+                    
+                    {files.length > 0 && (
+                        <div className="mb-3 text-sm text-gray-600 dark:text-gray-400">
+                            <span>
+                                {t("عرض:")} {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, files.length)} {t("من")} {files.length}
+                            </span>
+                        </div>
+                    )}
+
                     <div className="overflow-x-auto">
                         <table className="min-w-full table-fixed">
                             <colgroup>
                                 <col className="w-16" />
-                                <col className="w-1/3" />
                                 <col className="w-1/4" />
                                 <col className="w-1/4" />
+                                <col className="w-1/6" />
+                                <col className="w-1/6" />
                                 <col className="w-1/4" />
                             </colgroup>
                             <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
@@ -330,7 +496,7 @@ export default function Library() {
                                         {t("اسم الملف")}
                                     </th>
                                     <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                        {t("تم الرفع من قبل ")}
+                                        {t("تم الرفع من قبل")}
                                     </th>
                                     <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                                         {t("الحجم")}
@@ -344,7 +510,7 @@ export default function Library() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {files.map((file, idx) => (
+                                {currentItems.map((file, idx) => (
                                     <tr
                                         key={file.id}
                                         className={`transition-colors duration-200 ${
@@ -354,17 +520,17 @@ export default function Library() {
                                         } hover:bg-gray-100 dark:hover:bg-gray-600`}
                                     >
                                         <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">
-                                            {idx + 1}
+                                            {indexOfFirstItem + idx + 1}
                                         </td>
                                         <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-200 font-medium">
                                             <div className="flex items-center">
-                                                <DocumentIcon className="h-5 w-5 text-blue-500 ml-2" />
-                                                {file.name}
+                                                {getFileIcon(file)}
+                                                <span className="mr-2 truncate">{file.name}</span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-200 font-medium">
                                             <div className="flex items-center">
-                                                {file.uploaded_by.name}
+                                                {file.uploaded_by?.name || t("غير معروف")}
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300">
@@ -376,20 +542,30 @@ export default function Library() {
                                         <td className="px-4 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 text-center">
                                             <div className="flex justify-center space-x-2">
                                                 <button
+                                                    onClick={() => handleViewFile(file)}
+                                                    className="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition-colors flex items-center gap-1"
+                                                    title={t("عرض الملف")}
+                                                >
+                                                    <EyeIcon className="h-4 w-4" />
+                                                    {t("عرض")}
+                                                </button>
+                                                <button
                                                     onClick={() => handleDownloadFile(file)}
                                                     className="px-3 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors flex items-center gap-1"
+                                                    title={t("تحميل الملف")}
                                                 >
                                                     <ArrowDownTrayIcon className="h-4 w-4" />
                                                     {t("تحميل")}
                                                 </button>
-                                        {(auth.user?.member?.add_library === 1 || auth.user.role === 'superadmin') && (
-                                                <button
-                                                   onClick={() => handleDeleteFile(file)}
-                                                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg transition-colors"
-                                                >
-                                                    <TrashIcon className="h-4 w-4" />
-                                                </button>
-                                        )}
+                                                {canManageLibrary && (
+                                                    <button
+                                                        onClick={() => showConfirmDeleteFile(file)}
+                                                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg transition-colors"
+                                                        title={t("حذف الملف")}
+                                                    >
+                                                        <TrashIcon className="h-4 w-4" />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -402,9 +578,39 @@ export default function Library() {
                             </div>
                         )}
                     </div>
+
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => paginate(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
+                                >
+                                    <ChevronRightIcon className="h-4 w-4" />
+                                    {t("السابق")}
+                                </button>
+                                
+                                <div className="flex items-center gap-1 mx-2">
+                                    {renderPageNumbers()}
+                                </div>
+
+                                <button
+                                    onClick={() => paginate(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
+                                >
+                                    {t("التالي")}
+                                    <ChevronLeftIcon className="h-4 w-4" />
+                                </button>
+                            </div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                                {t("صفحة")} {currentPage} {t("من")} {totalPages}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                {/* Add Folder Modal */}
                 {addFolderModal && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-up">
@@ -455,7 +661,6 @@ export default function Library() {
                     </div>
                 )}
 
-                {/* Rename Folder Modal */}
                 {renameFolderModal && selectedFolder && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-up">
@@ -506,7 +711,6 @@ export default function Library() {
                     </div>
                 )}
 
-                {/* Delete Folder Modal */}
                 {deleteFolderModal && selectedFolder && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-up">
@@ -548,7 +752,6 @@ export default function Library() {
                     </div>
                 )}
 
-                {/* Upload File Modal */}
                 {uploadModal && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-up">
@@ -567,6 +770,9 @@ export default function Library() {
                                 <div className="mb-4">
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                         {t("اختر الملفات")}
+                                        <span className="text-xs text-gray-400 block">
+                                            {t("الحد الأقصى: 10 ميجابايت لكل ملف. الأنواع المسموحة: صور، PDF، DOC، DOCX، XLS، XLSX، TXT، PPT، PPTX، ZIP، RAR، 7Z")}
+                                        </span>
                                     </label>
                                     <input
                                         type="file"
@@ -587,10 +793,10 @@ export default function Library() {
                                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                                             {t("الملفات المحددة:")}
                                         </p>
-                                        <ul className="text-sm text-gray-700 dark:text-gray-300">
+                                        <ul className="text-sm text-gray-700 dark:text-gray-300 max-h-32 overflow-y-auto">
                                             {uploadFiles.map((file, index) => (
-                                                <li key={index} className="truncate">
-                                                    {file.name}
+                                                <li key={index} className="truncate py-1 border-b border-gray-100 dark:border-gray-600">
+                                                    {file.name} ({formatFileSize(file.size)})
                                                 </li>
                                             ))}
                                         </ul>
@@ -601,7 +807,7 @@ export default function Library() {
                                     <div className="mb-4">
                                         <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
                                             <div
-                                                className="bg-primary h-2.5 rounded-full"
+                                                className="bg-primary h-2.5 rounded-full transition-all duration-300"
                                                 style={{ width: `${uploadProgress}%` }}
                                             ></div>
                                         </div>
@@ -639,6 +845,61 @@ export default function Library() {
                         </div>
                     </div>
                 )}
+
+                {viewFileModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+                            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 truncate">
+                                    {t("عرض الملف:")} {viewFileName}
+                                </h3>
+                                <button
+                                    onClick={closeModal}
+                                    className="text-gray-400 hover:text-gray-600 dark:text-gray-300 transition-transform hover:rotate-90"
+                                >
+                                    <XMarkIcon className="h-6 w-6" />
+                                </button>
+                            </div>
+                            <div className="flex-1 p-4 overflow-auto bg-gray-50 dark:bg-gray-900">
+                                <iframe
+                                    src={viewFileUrl}
+                                    className="w-full h-full min-h-[500px] rounded-lg"
+                                    title={viewFileName}
+                                    frameBorder="0"
+                                />
+                            </div>
+                            <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-3">
+                                <button
+                                    onClick={closeModal}
+                                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                >
+                                    {t("إغلاق")}
+                                </button>
+                                <a
+                                    href={viewFileUrl}
+                                    download={viewFileName}
+                                    className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-center"
+                                >
+                                    <ArrowDownTrayIcon className="h-4 w-4 inline ml-1.5" />
+                                    {t("تحميل الملف")}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                <ConfirmModal
+                    isOpen={confirmModal.isOpen}
+                    onClose={closeConfirmModal}
+                    onConfirm={confirmModal.onConfirm}
+                    title={confirmModal.title}
+                    message={confirmModal.message}
+                    confirmText={confirmModal.confirmText}
+                    confirmColor={confirmModal.confirmColor}
+                    icon={confirmModal.icon}
+                    loading={confirmModal.loading}
+                    errorMessage={confirmModal.errorMessage}
+                />
             </div>
         </AdminLayout>
     );

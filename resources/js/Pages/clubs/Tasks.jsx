@@ -1,47 +1,62 @@
+// pages/admin/Tasks.jsx
 import React, { useState, useEffect } from "react";
 import AdminLayout from "./layout";
 import axios from "axios";
 import { usePage } from "@inertiajs/react";
 import {
-    XMarkIcon,
     PlusIcon,
-    PencilIcon,
-    TrashIcon,
-    EyeIcon,
-    AdjustmentsHorizontalIcon,
-    CheckBadgeIcon,
-    UserCircleIcon,
     DocumentTextIcon,
-    CalendarIcon,
-    UserGroupIcon,
-    PaperClipIcon,
-    CheckCircleIcon,
-    ClockIcon,
-    ExclamationTriangleIcon,
-    MagnifyingGlassIcon,
+    XMarkIcon,
+    ChevronLeftIcon,
+    ChevronRightIcon,
+    FunnelIcon,
 } from "@heroicons/react/24/outline";
-import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import TasksModel from "./components/TasksModel";
+import TaskForm from "./Components/tasks/TaskForm";
+import TaskCard from "./Components/tasks/TaskCard";
+import TasksModel from "./Components/tasks/TasksModel";
+import ConfirmModal from "./Components/ConfirmModal";
 
 export default function Tasks() {
-    const { app_url, auth } = usePage().props;
-    const [activeTab, setActiveTab] = useState("tasks");
+    const { app_url, auth,permissions } = usePage().props;
     const { t } = useTranslation();
+
+    const [tasks, setTasks] = useState([]);
+    const [filteredTasks, setFilteredTasks] = useState([]);
+    const [members, setMembers] = useState([]);
+    const [cycles, setCycles] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTask, setSearchTask] = useState("");
+    const [selectedMemberFilter, setSelectedMemberFilter] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const rowsPerPage = 10;
+
+    // Modal states
     const [addTaskModal, setAddTaskModal] = useState(false);
     const [editTaskModal, setEditTaskModal] = useState(false);
-    const [deleteTaskModal, setDeleteTaskModal] = useState(false);
+    const [tasksModel, setTasksModel] = useState(false);
+    const [selectedTaskGroup, setSelectedTaskGroup] = useState([]);
     const [selectedTask, setSelectedTask] = useState(null);
-    const [tasks, setTasks] = useState([]);
-    const [memberNameSearch, setMemberNameSearch] = useState("");
-    const [memberIdSearch, setMemberIdSearch] = useState("");
-    const [members, setMembers] = useState([]);
-    const [searchTask, setSearchTask] = useState("");
+    const [fileUploads, setFileUploads] = useState([]);
     const [errors, setErrors] = useState({});
-    const [showTasksModel,setShowTasksModel] = useState(false);
-    const [cycles, setCycles] = useState([]);
-    const [description,setDescription] =useState('');
-    const [modelDescription,setModelDescription]=useState(false);
+    const [saving, setSaving] = useState(false);
+
+    // Confirm Modal states
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        onConfirm: null,
+        title: '',
+        message: '',
+        confirmText: 'حذف',
+        confirmColor: 'bg-red-600 hover:bg-red-700',
+        icon: 'danger',
+        loading: false,
+    });
+    const permission = permissions.permissions;
+    const isAdmin = auth.user?.role === 'admin';
+    const canManageTasks = permission?.add_tasks || isAdmin;
+    const userId = auth.user?.id;
+    
     const [newTask, setNewTask] = useState({
         title: "",
         description: "",
@@ -50,182 +65,251 @@ export default function Tasks() {
         files: [],
         status: "pending",
     });
-    const [tastText, setTaskText] = useState({
-        task_text: "",
-        task_file: null
-    });
-    const [modelTaskText, setModelTaskText] = useState(false);
-    const [selectedMember, setSelectedMember] = useState(null);
-    const [selectedMemberEdit, setSelectedMemberEdit] = useState(null);
-    const [loading, setLoading] = useState(false);
 
-    const [fileUploads, setFileUploads] = useState([]);
-    const [editFileUploads, setEditFileUploads] = useState([]);
-    const [currentPage, setCurrentPage] = useState(1);
-    const rowsPerPage = 10;
-
-    const showAllTasks = async () => {
+    const fetchTasks = async () => {
         try {
             const response = await axios.get(`${app_url}/tasks`);
-            const tasksData = response.data.tasks;
+            let tasksData = response.data.tasks || [];
 
-            const groupedTasks =  Object.values(
-                tasksData.reduce((acc ,task)=>{
-                    const key =task.task_id || null;
-                    if(!acc[key]) acc[key]=[];
+            if (!canManageTasks) {
+                tasksData = tasksData.filter(task => task.assigned_to === userId);
+            }
+
+            const grouped = Object.values(
+                tasksData.reduce((acc, task) => {
+                    const key = task.task_id || task.id;
+                    if (!acc[key]) acc[key] = [];
                     acc[key].push(task);
                     return acc;
-                },{})
-            )
-        const sortedGroupedTasks = groupedTasks.sort((a, b) => {
-            const latestA = Math.max(...a.map(task => new Date(task.updated_at)));
-            const latestB = Math.max(...b.map(task => new Date(task.updated_at)));
-            return latestB - latestA;
-        });
-
-        setTasks(sortedGroupedTasks);
+                }, {})
+            );
+            const sorted = grouped.sort((a, b) => {
+                const latestA = Math.max(...a.map((t) => new Date(t.updated_at || t.created_at).getTime()));
+                const latestB = Math.max(...b.map((t) => new Date(t.updated_at || t.created_at).getTime()));
+                return latestB - latestA;
+            });
+            setTasks(sorted);
+            setFilteredTasks(sorted);
         } catch (error) {
-            console.log(error);
-            setTasks([]);
+            console.error("Error fetching tasks:", error);
         }
     };
-    const handelSelectedAllEdit = () => {
-        const currentAssignees = Array.isArray(selectedTask.assigned_to)
-            ? selectedTask.assigned_to
-            : selectedTask.assigned_to
-            ? [selectedTask.assigned_to]
-            : [];
 
-        const allUserIds = filteredMembers.map((member) =>
-            Number(member.user_id)
-        );
-
-        if (currentAssignees.length === allUserIds.length) {
-            setSelectedTask({
-                ...selectedTask,
-                assigned_to: [],
-            });
-            document.querySelectorAll("select").forEach((select)=>{
-                select.selectedIndex=0;
-            })
-        } else {
-            setSelectedTask({
-                ...selectedTask,
-                assigned_to: allUserIds,
-            });
+    const fetchMembers = async () => {
+        try {
+            const response = await axios.get(`${app_url}/members`);
+            console.log("Members data:", response.data.members);
+            setMembers(response.data.members || []);
+        } catch (error) {
+            console.error("Error fetching members:", error);
         }
     };
-    const handelSelectedcycleEdit = (cycleId) => {
-        if (!cycleId) return;
 
-        const id = Number(cycleId);
-        const selectMem = members
-            .filter((member) => member.cycle_id === id)
-            .map((member) => Number(member.user_id));
-
-        const currentAssignees = Array.isArray(selectedTask.assigned_to)
-            ? selectedTask.assigned_to
-            : selectedTask.assigned_to
-            ? [selectedTask.assigned_to]
-            : [];
-
-        setSelectedTask({
-            ...selectedTask,
-            assigned_to: Array.from(
-                new Set([...currentAssignees, ...selectMem])
-            ),
-        });
-    };
-    const handleRemoveExistingFile = async (fileId) => {
-        if (window.confirm("هل أنت متأكد من حذف هذا الملف؟")) {
-            try {
-                await axios.delete(`/api/tasks/files/${fileId}`);
-
-                setSelectedTask({
-                    ...selectedTask,
-                    files: selectedTask.files.filter(
-                        (file) => file.id !== fileId
-                    ),
-                });
-            } catch (error) {
-                console.error("Error deleting file:", error);
-            }
-        }
-    };
     const fetchCycles = async () => {
         try {
             const response = await axios.get(`${app_url}/cycles`);
-            setCycles(response.data.cycles);
+            setCycles(response.data.cycles || []);
         } catch (error) {
-            console.log(t("Error fetching cycles:"), error);
+            console.error("Error fetching cycles:", error);
         }
     };
-    const showAllMembers = async () => {
+
+    const handleTaskStatusChange = async (taskId, status) => {
         try {
-            const response = await axios.get(`${app_url}/members`);
-            setMembers(response.data.members);
+            await axios.post(`${app_url}/tasks/${taskId}/status`, { status });
+            await fetchTasks();
         } catch (error) {
-            console.log(error);
+            console.error("Error updating task status:", error);
         }
     };
 
     useEffect(() => {
-        showAllTasks();
-        showAllMembers();
-        fetchCycles();
+        const loadData = async () => {
+            setLoading(true);
+            await Promise.all([fetchTasks(), fetchMembers(), fetchCycles()]);
+            setLoading(false);
+        };
+        loadData();
     }, []);
 
-const filteredTasks = tasks
-  .map((group) =>
-    group.filter(
-      (task) =>
-        task.title.toLowerCase().includes(searchTask.toLowerCase()) ||
-        (task.assignee?.name || "")
-          .toLowerCase()
-          .includes(searchTask.toLowerCase())
-    )
-  )
-  .filter((group) => group.length > 0);
+    useEffect(() => {
+        let filtered = tasks.filter((group) => {
+     
+            const matchesSearch = group.some(
+                (task) =>
+                    task.title?.toLowerCase().includes(searchTask.toLowerCase()) ||
+                    task.assignee?.name?.toLowerCase().includes(searchTask.toLowerCase()) ||
+                    task.assigned_to?.toString().includes(searchTask)
+            );
+
+         
+            let matchesMember = true;
+            if (selectedMemberFilter) {
+                const filterValue = parseInt(selectedMemberFilter);
+                matchesMember = group.some((task) => {
+
+                    const taskAssignedTo = parseInt(task.assigned_to);
+                    
+                    const member = members.find(m => m.user_id === taskAssignedTo);
+                    return member && member.id === filterValue;
+                });
+            }
+
+            return matchesSearch && matchesMember;
+        });
+        
+        setFilteredTasks(filtered);
+        setCurrentPage(1);
+    }, [searchTask, selectedMemberFilter, tasks, members]);
 
 
-    const filteredMembers = useMemo(() => {
-        return members.filter(
-            (member) =>
-                member.name
-                    .toLowerCase()
-                    .includes(memberNameSearch.toLowerCase()) &&
-                (member.member_id
-                    ? member.member_id.toString().includes(memberIdSearch)
-                    : true)
-        );
-    }, [members, memberNameSearch, memberIdSearch]);
+    const paginate = (pageNumber) => {
+        if (pageNumber >= 1 && pageNumber <= totalPages) {
+            setCurrentPage(pageNumber);
+            const listElement = document.querySelector('.space-y-2');
+            if (listElement) {
+                listElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+    };
 
     const indexOfLastItem = currentPage * rowsPerPage;
     const indexOfFirstItem = indexOfLastItem - rowsPerPage;
     const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredTasks.length / rowsPerPage);
 
-    const handleAddTask = async () => {
-        setLoading(true);
+    const renderPageNumbers = () => {
+        const pageNumbers = [];
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            pageNumbers.push(
+                <button
+                    key={i}
+                    onClick={() => paginate(i)}
+                    className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                        currentPage === i
+                            ? 'bg-primary text-white'
+                            : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                >
+                    {i}
+                </button>
+            );
+        }
+        return pageNumbers;
+    };
+
+ 
+    const resetFilters = () => {
+        setSearchTask("");
+        setSelectedMemberFilter("");
+    };
+
+    const handleAddTask = () => {
+        setNewTask({
+            title: "",
+            description: "",
+            assigned_to: [],
+            due_date: "",
+            files: [],
+            status: "pending",
+        });
+        setFileUploads([]);
         setErrors({});
+        setAddTaskModal(true);
+    };
+
+    const handleEditTask = (task) => {
+        const taskGroup = tasks.find(group => 
+            group.some(t => t.id === task.id || t.task_id === task.task_id)
+        );
+        
+        const assignedToArray = taskGroup 
+            ? taskGroup.map(t => Number(t.assigned_to)).filter(Boolean)
+            : [];
+        
+        setSelectedTask({
+            ...task,
+            assigned_to: assignedToArray,
+        });
+        setFileUploads([]);
+        setErrors({});
+        setEditTaskModal(true);
+    };
+
+    const handleViewTask = (task) => {
+        const taskGroup = tasks.find(group => 
+            group.some(t => t.id === task.id || t.task_id === task.task_id)
+        );
+        setSelectedTaskGroup(taskGroup || [task]);
+        setTasksModel(true);
+    };
+
+    const handleDeleteTask = (task) => {
+        setSelectedTask(task);
+        showConfirmDelete(task);
+    };
+
+    const showConfirmDelete = (task) => {
+        setConfirmModal({
+            isOpen: true,
+            onConfirm: () => handleDeleteConfirm(task),
+            title: t("هل أنت متأكد من حذف هذه المهمة؟"),
+            message: `سيتم حذف المهمة "${task.title}" وجميع بياناتها نهائياً. هذا الإجراء لا يمكن التراجع عنه.`,
+            confirmText: t("حذف"),
+            confirmColor: "bg-red-600 hover:bg-red-700",
+            icon: "danger",
+            loading: false,
+        });
+    };
+
+    const closeConfirmModal = () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+    };
+
+    const handleDeleteConfirm = async (task) => {
+        setConfirmModal((prev) => ({ ...prev, loading: true }));
         try {
-            if (
-                !newTask.title ||
-                !newTask.due_date ||
-                newTask.assigned_to.length === 0
-            ) {
-                setErrors({
-                    general: ["جميع الحقول المطلوبة يجب ملؤها"],
-                });
-                setLoading(false);
+            await axios.delete(`${app_url}/tasks/${task.id}`);
+            closeConfirmModal();
+            setSelectedTask(null);
+            await fetchTasks();
+        } catch (error) {
+            console.error("Error deleting task:", error);
+            setConfirmModal((prev) => ({ ...prev, loading: false }));
+        }
+    };
+
+    const handleSaveTask = async (isEdit = false) => {
+        setSaving(true);
+        setErrors({});
+
+        try {
+            const formData = new FormData();
+            const taskData = isEdit ? selectedTask : newTask;
+
+            const assignedToArray = Array.isArray(taskData.assigned_to) 
+                ? taskData.assigned_to 
+                : [];
+
+            if (!taskData.title || !taskData.due_date || assignedToArray.length === 0) {
+                setErrors({ general: [t("جميع الحقول المطلوبة يجب ملؤها")] });
+                setSaving(false);
                 return;
             }
 
-            const formData = new FormData();
-            formData.append("title", newTask.title);
-            formData.append("description", newTask.description || "");
-            formData.append("due_date", newTask.due_date);
+            formData.append("title", taskData.title);
+            formData.append("description", taskData.description || "");
+            formData.append("due_date", taskData.due_date);
 
-            newTask.assigned_to.forEach((userId) => {
+            assignedToArray.forEach((userId) => {
                 formData.append("assigned_to[]", userId);
             });
 
@@ -233,1813 +317,267 @@ const filteredTasks = tasks
                 formData.append("files[]", file);
             });
 
-            console.log("Sending data:", {
-                title: newTask.title,
-                description: newTask.description,
-                assigned_to: newTask.assigned_to,
-                due_date: newTask.due_date,
-                filesCount: fileUploads.length,
-            });
-
-            const response = await axios.post(`${app_url}/tasks`, formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            });
-            console.log("Add task response:", response.data);
+            let response;
+            if (isEdit && selectedTask) {
+                formData.append("_method", "PUT");
+                response = await axios.post(`${app_url}/tasks/${selectedTask.id}`, formData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+            } else {
+                response = await axios.post(`${app_url}/tasks`, formData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+            }
 
             if (response.data.success) {
-                showAllTasks();
                 setAddTaskModal(false);
-                setNewTask({
-                    title: "",
-                    description: "",
-                    assigned_to: [],
-                    due_date: "",
-                    files: [],
-                    status: "pending",
-                });
-                setFileUploads([]);
-                setMemberNameSearch("");
-                setMemberIdSearch("");
-            }
-        } catch (error) {
-            console.error("Error adding task:", error);
-
-            if (error.response) {
-                setErrors(error.response.data.errors || {});
-                console.error("Server error:", error.response.data);
-            } else if (error.request) {
-                setErrors({
-                    general: ["تعذر الاتصال بالخادم"],
-                });
-            } else {
-                setErrors({
-                    general: ["حدث خطأ أثناء إعداد الطلب"],
-                });
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleEditTask = async () => {
-        setLoading(true);
-        setErrors({});
-
-        try {
-            if (
-                !selectedTask.title ||
-                !selectedTask.due_date ||
-                (Array.isArray(selectedTask.assigned_to) &&
-                    selectedTask.assigned_to.length === 0) ||
-                (!Array.isArray(selectedTask.assigned_to) &&
-                    !selectedTask.assigned_to)
-            ) {
-                setErrors({
-                    general: ["جميع الحقول المطلوبة يجب ملؤها"],
-                });
-                setLoading(false);
-                return;
-            }
-
-            const formData = new FormData();
-
-            formData.append("title", selectedTask.title);
-            formData.append("description", selectedTask.description || "");
-            formData.append("due_date", selectedTask.due_date);
-
-            if (Array.isArray(selectedTask.assigned_to)) {
-                selectedTask.assigned_to.forEach((userId) => {
-                    formData.append("assigned_to[]", userId);
-                });
-            } else {
-                formData.append("assigned_to[]", selectedTask.assigned_to);
-            }
-
-            editFileUploads.forEach((file) => {
-                formData.append("files[]", file);
-            });
-
-            console.log("Sending update data:", {
-                title: selectedTask.title,
-                description: selectedTask.description,
-                assigned_to: selectedTask.assigned_to,
-                due_date: selectedTask.due_date,
-                newFilesCount: editFileUploads.length,
-            });
-
-            const response = await axios.post(
-                `${app_url}/tasks/${selectedTask.id}`,
-                formData,
-                {
-                    headers: {
-                        "Content-Type": "multipart/form-data",
-                    },
-                }
-            );
-
-            console.log("Edit task response:", response.data);
-
-            if (response.data.success || response.data.message) {
-                showAllTasks();
                 setEditTaskModal(false);
-                setEditFileUploads([]);
-                setSelectedMemberEdit(null);
-                setMemberNameSearch("");
-                setMemberIdSearch("");
+                setSelectedTask(null);
+                setFileUploads([]);
+                await fetchTasks();
             }
         } catch (error) {
-            console.error("Error editing task:", error);
-
-            if (error.response) {
-                setErrors(error.response.data.errors || {});
-                console.error("Server error:", error.response.data);
-            } else if (error.request) {
-                setErrors({
-                    general: ["تعذر الاتصال بالخادم"],
-                });
+            if (error.response?.data?.errors) {
+                setErrors(error.response.data.errors);
             } else {
-                setErrors({
-                    general: ["حدث خطأ أثناء إعداد الطلب"],
-                });
+                setErrors({ general: [t("حدث خطأ أثناء حفظ المهمة")] });
             }
         } finally {
-            setLoading(false);
+            setSaving(false);
         }
     };
 
-    const handleDeleteTask = () => {
-        try {
-            const response = axios.delete(
-                `${app_url}/tasks/${selectedTask[0].id}`
-            );
-            showAllTasks();
-            setDeleteTaskModal(false);
-            setSelectedTask(null);
-        } catch (error) {
-            console.log(error);
-        }
-    };
-
-    const openEditModal = (task) => {
-        setSelectedTask(task[0]);
-
-
-            const assignedUserIds = task
-                .map((t) => t.assigned_to)
-                .filter(Boolean);
-
-            setSelectedTask({
-                ...task[0],
-                assigned_to: assignedUserIds,
-            });
-        setEditTaskModal(true);
-    };
-
-    const openDeleteModal = (task) => {
-        setSelectedTask(task);
-        setDeleteTaskModal(true);
-    };
-
-    const handleTaskTextChange = (task) => {
-        setSelectedTask(task);
-        setModelTaskText(true);
-    };
-
-    const handleFileUpload = (e, isEdit = false) => {
-        const files = Array.from(e.target.files);
-        if (isEdit) {
-            setEditFileUploads([...editFileUploads, ...files]);
-        } else {
-            setFileUploads([...fileUploads, ...files]);
-        }
-    };
-
-    const removeFile = (index, isEdit = false) => {
-        if (isEdit) {
-            setEditFileUploads(editFileUploads.filter((_, i) => i !== index));
-        } else {
-            setFileUploads(fileUploads.filter((_, i) => i !== index));
-        }
-    };
-
-    const handleTaskStatusChange = async (taskId, status) => {
-        try {
-            const response = await axios.post(
-                `${app_url}/tasks/${taskId}/status`,
-                { status: status }
-            );
-            showAllTasks();
-            setShowTasksModel(false);
-        } catch (error) {
-            console.log(error);
-        }
-    };
-
-    const getStatusBadge = (status) => {
-        switch (status) {
-            case "completed":
-                return (
-                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-lg">
-                        {t("مكتملة")}
-                    </span>
-                );
-            case "in_progress":
-                return (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-lg">
-                        {t("جارية")}
-                    </span>
-                );
-            case "overdue":
-                return (
-                    <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-lg">
-                        {t("متأخرة")}
-                    </span>
-                );
-            default:
-                return (
-                    <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-lg">
-                        {t("جارية")}
-                    </span>
-                );
-        }
-    };
-    const handelSelectedAll = () => {
-        if (newTask.assigned_to.length === members.length) {
-            setNewTask({
-                ...newTask,
-                assigned_to: [],
-            });
-            document.querySelectorAll("select").forEach((select)=>{
-                select.selectedIndex=0;
-            });
-        } else {
-            const allmem = members.map((member) => member.user_id);
-            setNewTask({
-                ...newTask,
-                assigned_to: allmem,
-            });
-        }
-    };
-
-    const handelSelectedcycle = (cycleId) => {
-        if (!cycleId) return;
-        const id = Number(cycleId);
-        const selectMem = members
-            .filter((member) => member.cycle_id === id)
-            .map((member) => Number(member.user_id));
-
-        setNewTask({
-            ...newTask,
-            assigned_to: Array.from(
-                new Set([...newTask.assigned_to, ...selectMem])
-            ),
-        });
-    };
-
-    const handleSendTaskText = async()=>{
-        try{
-            const formData = new FormData();
-            formData.append("task_text", tastText.task_text);
-            if (tastText.task_file) {
-                formData.append("task_file", tastText.task_file);
-            }
-                 const response = await axios.post(`${app_url}/tasktext/${selectedTask.id}`,formData,{
-                         headers: {
-                "Content-Type": "multipart/form-data",
-            },
-        }
-        );
-        setModelTaskText(false);
-        setTaskText({
-                task_text: "",
-                 task_file: null
-        })
-        }catch(error){
-            console.log(error);
-            setErrors(error.response.data.errors || {});
-        }
-    }
-
-    const handelTasksModel = (task) => {
-        setShowTasksModel(true);
-        setSelectedTask(task);
-    }
-    const closeModal =()=>{
-        setShowTasksModel(false);
-        setSelectedTask(null);
-    }
-    const openDescriptionModal=(des)=>{
-        setDescription(des);
-        setModelDescription(true);
-     }
-    // if user is member
-    if (auth.user?.member?.add_tasks === 0 && auth.user.role !== 'superadmin' ) {
+    if (loading) {
         return (
             <AdminLayout>
-            <div className="mx-3 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-10">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-6">
-                    {t("لوحة المهام")}
-                </h2>
-                {/* section tasks*/}
-                <div>
-                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">
-                        {t("المهام المطلوبة منك")}
-                    </h3>
-                    <div className="space-y-4">
-                        {tasks.flat()
-                            .filter((task) => task.assigned_to === auth.user.id)
-                            .map((task) => (
-                                <div
-                                    key={task.id}
-                                    className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg flex justify-between items-center"
-                                >
-                                    <div>
-                                        <h4 className="font-medium text-gray-800 dark:text-gray-200">
-                                            {task.title}
-                                        </h4>
-                                        <h4 className="font-medium text-gray-800 dark:text-gray-200">
-                                           <button onClick={() => openDescriptionModal(task.description)} className="px-3 py-1 flex gap-2  bg-primary text-white rounded hover:bg-primary-dark text-sm">
-                                                وصف المهمه
-                                         </button>
-                                        </h4>
-                                        {task.files && task.files.length > 0 ? (
-                                            task.files.map((file, index) => (
-                                                <div
-                                                    key={index}
-                                                    className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 p-2 rounded"
-                                                >
-                                                    <div className="flex items-center">
-                                                        <PaperClipIcon className="h-4 w-4 mr-2 text-gray-500" />
-                                                        <span className="text-sm">
-                                                            {file.file_name}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <a
-                                                            href={`${app_url}/storage/${file.file_path}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="text-blue-600 hover:text-blue-800"
-                                                        >
-                                                            <EyeIcon className="h-4 w-4" />
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <p className="text-gray-500 text-sm">
-                                                {t("لا توجد ملفات مرفقة")}
-                                            </p>
-                                        )}
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            {t("يجب التسليم قبل:")}{" "}
-                                            {task.due_date}
-                                        </p>
-                                        <div className="flex flex-wrap gap-2 mt-2">
-                                           المسؤول : {task?.assignee?.name}
-                                        </div>
-                                        <div className="p-2">
-                                            {getStatusBadge(task.status)}
-                                        </div>
-                                    </div>
-                                    {task.status !== "completed" &&
-                                        task.status !== "overdue" && (
-                                            <div className="flex items-center space-x-2 gap-2">
-                                                <button
-                                                    onClick={() =>
-                                                        handleTaskStatusChange(
-                                                            task.id,
-                                                            "completed"
-                                                        )
-                                                    }
-                                                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark"
-                                                >
-                                                    {t("تم الإكمال")}
-                                                </button>
-                                                <button
-                                                    onClick={() =>
-                                                        handleTaskTextChange(
-                                                            task
-                                                        )
-                                                    }
-                                                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark"
-                                                >
-                                                    {t("رفع رد")}
-                                                </button>
-                                            </div>
-                                        )}
-                                </div>
-                            ))}
-                    </div>
+                <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                 </div>
-               {modelDescription && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full">
-                            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">
-                                    {t(" وصف المهمة")}
-                                </h3>
-                                <button
-                                   onClick={() => {setModelDescription(false);setDescription('');}}
-                                    className="text-gray-400 hover:text-gray-600 dark:text-gray-300"
-                                >
-                                    <XMarkIcon className="h-6 w-6" />
-                                </button>
-                            </div>
-                            <div className="p-6 max-w-md align-top">
-                                <p className="text-gray-700 dark:text-gray-300 mb-4 whitespace-normal break-words">
-                                  {description}
-                                </p>
-                            </div>
-                            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3">
-                                <button
-                                    onClick={() => {setModelDescription(false);setDescription('');}}
-                                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                                >
-                                    {t("إغلاق")}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-                                {modelTaskText && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                                <button
-                                    onClick={() => {
-                                        setModelTaskText(false);
-                                    }}
-                                    className="text-gray-400 hover:text-gray-600 dark:text-gray-300"
-                                >
-                                    <XMarkIcon className="h-6 w-6" />
-                                </button>
-                            </div>
-                            <div className="p-6 space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t("ارسال رد")}
-                                    </label>
-                                    <textarea
-                                        type="text"
-                                        value={tastText.task_text}
-                                        onChange={(e) =>
-                                            setTaskText({
-                                                ...tastText,
-                                                task_text: e.target.value,
-                                            })
-                                        }
-                                        rows={5}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t("إرفاق ملف")}
-                                    </label>
-                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                                        <input
-                                            type="file"
-                                            onChange={(e) =>
-                                                setTaskText({
-                                                    ...tastText,
-                                                    task_file:
-                                                        e.target.files[0],
-                                                })
-                                            }
-                                            id="file-upload"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                            {errors &&
-                                Object.entries(errors).map(
-                                    ([field, msgs], i) => (
-                                        <div
-                                            key={i}
-                                            className="bg-red-100 text-red-700 p-2 rounded mb-1 text-sm mx-6"
-                                        >
-                                            {msgs.map((msg, j) => (
-                                                <p key={j}>{msg}</p>
-                                            ))}
-                                        </div>
-                                    )
-                                )}
-                            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3">
-                                <button
-                                    onClick={() => {
-                                        setModelTaskText(false);
-                                    }}
-                                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                                >
-                                    {t("إلغاء")}
-                                </button>
-                                <button
-                                    onClick={handleSendTaskText}
-                                    disabled={loading}
-                                    className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {loading
-                                        ? t("جاري الارسال...")
-                                        : t("ارسال  ")}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
             </AdminLayout>
         );
     }
 
-    // if user is manager
     return (
         <AdminLayout>
-            <div className="mx-3 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-10">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">
-                        {t("إدارة المهام")}
+            <div className="mx-3 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 mb-10">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                        <DocumentTextIcon className="h-5 w-5 text-primary" />
+                        {canManageTasks ? t("إدارة المهام") : t("المهام المطلوبة مني")}
+                        {/* <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                            ({filteredTasks.length})
+                        </span> */}
                     </h2>
-                    <div className="flex gap-2">
+                    {canManageTasks && (
                         <button
-                            onClick={() => setAddTaskModal(true)}
-                            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors"
+                            onClick={handleAddTask}
+                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors"
                         >
-                            <DocumentTextIcon className="h-4 w-4 mr-1.5" />
-                            {t("إضافة مهمة")}
+                            <PlusIcon className="h-4 w-4 ml-1" />
+                            {t("مهمة جديدة")}
                         </button>
-                    </div>
+                    )}
                 </div>
 
-                {/* Tabs */}
-                <div>
-                    <div>
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-                                {t("المهام")}
-                            </h3>
-                            <div className="flex items-center">
-                                <button
-                                    onClick={() => setCurrentPage(1)}
-                                    className="px-4 py-2 bg-primary text-white rounded-r-lg hover:bg-primary-dark transition-colors"
-                                >
-                                    {t("بحث")}
-                                </button>
-                                <input
-                                    type="text"
-                                    value={searchTask}
-                                    onChange={(e) =>
-                                        setSearchTask(e.target.value)
-                                    }
-                                    placeholder={t("بحث عن مهمة أو شخص")}
-                                    className="px-3 py-2 border border-gray-300 rounded-l-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full table-fixed">
-                                <thead className="bg-gray-50 dark:bg-gray-700">
-                                    <tr>
-                                        <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                            {t("المهمة")}
-                                        </th>
-                                        <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                            {t("المسؤول")}
-                                        </th>
-                                        <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                            {t("الوصف")}
-                                        </th>
-                                        <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                            {t("عرض التفاصيل ")}
-                                        </th>
-                                        <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                            {t("تاريخ التسليم")}
-                                        </th>
-                                        <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                            {t("الإجراءات")}
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                    {currentTasks.map((task) => (
-                                        <tr
-                                            key={task.id}
-                                            className="hover:bg-gray-50 dark:hover:bg-gray-600"
-                                        >
-                                            <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-200">
-                                                {task[0].title}
-                                            </td>
-                                            <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300">
-                                                {task[0].assigner?.name ||
-                                                    t("غير معروف")}
-                                            </td>
-                                            <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-200">
-                                                <button onClick={() => openDescriptionModal(task[0].description)} className="px-3 py-1 flex gap-2  bg-primary text-white rounded hover:bg-primary-dark text-sm">
-                                                    عرض وصف المهمة
-                                                </button>
-
-                                            </td>
-                                            <td className="px-4 py-3 text-right text-gray-600  dark:text-gray-300">
-                                                            <button
-                                                                onClick={() =>
-                                                                    handelTasksModel(
-                                                                        task
-                                                                    )
-                                                                }
-                                                                className="px-3 py-1 flex gap-2  bg-primary text-white rounded hover:bg-primary-dark text-sm"
-                                                            >
-                                                                عرض التفاصيل
-                                                                <EyeIcon className="h-4 w-4" />
-                                                            </button>
-
-                                            </td>
-                                            <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300">
-                                                {task[0].due_date}
-                                            </td>
-
-
-                                                <td className="px-4 py-3 text-center">
-                                                    <div className="flex justify-center space-x-2">
-                                                        <button
-                                                            onClick={() =>
-                                                                openEditModal(
-                                                                    task
-                                                                )
-                                                            }
-                                                            className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg"
-                                                        >
-                                                            <PencilIcon className="h-4 w-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() =>
-                                                                openDeleteModal(
-                                                                    task
-                                                                )
-                                                            }
-                                                            className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg"
-                                                        >
-                                                            <TrashIcon className="h-4 w-4" />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {filteredTasks.length > rowsPerPage && (
-                            <div className="flex items-center justify-between mt-6">
-                                <div className="text-sm text-gray-700 dark:text-gray-300">
-                                    {t("عرض")} {indexOfFirstItem + 1}-
-                                    {Math.min(
-                                        indexOfLastItem,
-                                        filteredTasks.length
-                                    )}{" "}
-                                    {t("من")} {filteredTasks.length} {t("مهمة")}
-                                </div>
-
-                                <div className="flex space-x-2">
-                                    <button
-                                        onClick={() =>
-                                            setCurrentPage((prev) =>
-                                                Math.max(prev - 1, 1)
-                                            )
-                                        }
-                                        disabled={currentPage === 1}
-                                        className={`px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 ${
-                                            currentPage === 1
-                                                ? "bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
-                                                : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500"
-                                        }`}
-                                    >
-                                        {t("السابق")}
-                                    </button>
-
-                                    <div className="flex space-x-1">
-                                        {Array.from(
-                                            {
-                                                length: Math.ceil(
-                                                    filteredTasks.length /
-                                                        rowsPerPage
-                                                ),
-                                            },
-                                            (_, i) => i + 1
-                                        )
-                                            .filter((page) => {
-                                                return (
-                                                    page === 1 ||
-                                                    page ===
-                                                        Math.ceil(
-                                                            filteredTasks.length /
-                                                                rowsPerPage
-                                                        ) ||
-                                                    Math.abs(
-                                                        page - currentPage
-                                                    ) <= 1
-                                                );
-                                            })
-                                            .map((page, index, array) => {
-                                                const showEllipsis =
-                                                    index > 0 &&
-                                                    page - array[index - 1] > 1;
-                                                return (
-                                                    <React.Fragment key={page}>
-                                                        {showEllipsis && (
-                                                            <span className="px-3 py-2 text-gray-500">
-                                                                ...
-                                                            </span>
-                                                        )}
-                                                        <button
-                                                            onClick={() =>
-                                                                setCurrentPage(
-                                                                    page
-                                                                )
-                                                            }
-                                                            className={`px-3 py-2 rounded-lg border ${
-                                                                currentPage ===
-                                                                page
-                                                                    ? "bg-primary text-white border-primary"
-                                                                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500"
-                                                            }`}
-                                                        >
-                                                            {page}
-                                                        </button>
-                                                    </React.Fragment>
-                                                );
-                                            })}
-                                    </div>
-
-                                    <button
-                                        onClick={() =>
-                                            setCurrentPage((prev) =>
-                                                Math.min(
-                                                    prev + 1,
-                                                    Math.ceil(
-                                                        filteredTasks.length /
-                                                            rowsPerPage
-                                                    )
-                                                )
-                                            )
-                                        }
-                                        disabled={
-                                            currentPage ===
-                                            Math.ceil(
-                                                filteredTasks.length /
-                                                    rowsPerPage
-                                            )
-                                        }
-                                        className={`px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 ${
-                                            currentPage ===
-                                            Math.ceil(
-                                                filteredTasks.length /
-                                                    rowsPerPage
-                                            )
-                                                ? "bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
-                                                : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500"
-                                        }`}
-                                    >
-                                        {t("التالي")}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                {/* Search and Filters */}
+                <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                    <div className="flex-1">
+                        <input
+                            type="text"
+                            value={searchTask}
+                            onChange={(e) => setSearchTask(e.target.value)}
+                            placeholder={t("بحث عن مهمة أو شخص...")}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white dark:bg-gray-600 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                        />
                     </div>
+                    
+                    {canManageTasks && members.length > 0 && (
+                        <div className="sm:w-64">
+                            <select
+                                value={selectedMemberFilter}
+                                onChange={(e) => setSelectedMemberFilter(e.target.value)}
+                                className="w-full px-8 py-2 text-sm border border-gray-300 rounded-lg bg-white dark:bg-gray-600 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                            >
+                                <option value="">{t("جميع الموظفين")}</option>
+                                {members.map((member) => (
+                                    <option key={member.id} value={member.id}>
+                                        {member.name} {member.member_id ? `(${member.member_id})` : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    {/* Reset Filter Button */}
+                    {(searchTask || selectedMemberFilter) && (
+                        <button
+                            onClick={resetFilters}
+                            className="px-3 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-1"
+                        >
+                            <XMarkIcon className="h-4 w-4" />
+                            {t("إعادة الضبط")}
+                        </button>
+                    )}
                 </div>
 
-                {/* Add Task Modal */}
-                {addTaskModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">
-                                    {t("إضافة مهمة جديدة")}
-                                </h3>
-                                <button
-                                    onClick={() => {
-                                        setAddTaskModal(false);
-                                        setMemberNameSearch("");
-                                        setMemberIdSearch("");
-                                        setSelectedMember(null);
-                                    }}
-                                    className="text-gray-400 hover:text-gray-600 dark:text-gray-300"
-                                >
-                                    <XMarkIcon className="h-6 w-6" />
-                                </button>
-                            </div>
-                            <div className="p-6 space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t("عنوان المهمة")}
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={newTask.title}
-                                        onChange={(e) =>
-                                            setNewTask({
-                                                ...newTask,
-                                                title: e.target.value,
-                                            })
-                                        }
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t("وصف المهمة")}
-                                    </label>
-                                    <textarea
-                                        value={newTask.description}
-                                        onChange={(e) =>
-                                            setNewTask({
-                                                ...newTask,
-                                                description: e.target.value,
-                                            })
-                                        }
-                                        rows={3}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t("اختيار العضو")}
-                                    </label>
-                                    <div>
-                                        <button
-                                            className="bg-primary dark:bg-primary-dark text-white rounded-md p-4 m-2"
-                                            onClick={handelSelectedAll}
-                                        >
-                                            {t("تحديد الكل ")}
-                                        </button>
-                                        <select
-                                            className="bg-primary px-8 dark:bg-primary-dark text-white rounded-md py-2 m-2"
-                                            onChange={(e) =>
-                                                handelSelectedcycle(
-                                                    e.target.value
-                                                )
-                                            }
-                                            defaultValue=""
-                                        >
-                                            <option value="">
-                                                {t("تحديد حسب القسم")}
-                                            </option>
-
-                                            {cycles?.map((cycle) => (
-                                                <option
-                                                    key={cycle.id}
-                                                    value={cycle.id}
-                                                >
-                                                    {cycle.name}
-                                                </option>
-                                            ))}
-                                        </select>
-
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-                                            </div>
-                                            <input
-                                                type="text"
-                                                placeholder={t(
-                                                    "البحث بالاسم..."
-                                                )}
-                                                value={memberNameSearch}
-                                                onChange={(e) =>
-                                                    setMemberNameSearch(
-                                                        e.target.value
-                                                    )
-                                                }
-                                                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                            />
-                                        </div>
-
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-                                            </div>
-                                            <input
-                                                type="text"
-                                                placeholder={t(
-                                                    "البحث برقم العضوية..."
-                                                )}
-                                                value={memberIdSearch}
-                                                onChange={(e) =>
-                                                    setMemberIdSearch(
-                                                        e.target.value
-                                                    )
-                                                }
-                                                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-700 max-h-60 overflow-y-auto">
-                                        {filteredMembers.length > 0 ? (
-                                            <div className="space-y-2">
-                                                {filteredMembers.map(
-                                                    (member) => (
-                                                        <div
-                                                            key={member.id}
-                                                            className={`flex items-center justify-between p-2 rounded cursor-pointer ${
-                                                                newTask.assigned_to.includes(
-                                                                    member.user_id
-                                                                )
-                                                                    ? "bg-primary-100 border border-primary-300 dark:bg-primary-900 dark:border-primary-700"
-                                                                    : "hover:bg-gray-100 dark:hover:bg-gray-600"
-                                                            }`}
-                                                            onClick={() => {
-                                                                const updatedAssignees =
-                                                                    newTask.assigned_to.includes(
-                                                                        member.user_id
-                                                                    )
-                                                                        ? newTask.assigned_to.filter(
-                                                                              (
-                                                                                  id
-                                                                              ) =>
-                                                                                  id !==
-                                                                                  member.user_id
-                                                                          )
-                                                                        : [
-                                                                              ...newTask.assigned_to,
-                                                                              member.user_id,
-                                                                          ];
-
-                                                                setNewTask({
-                                                                    ...newTask,
-                                                                    assigned_to:
-                                                                        updatedAssignees,
-                                                                });
-                                                            }}
-                                                        >
-                                                            <div className="flex items-center">
-                                                                <div className="ml-3">
-                                                                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                                        {
-                                                                            member.name
-                                                                        }
-                                                                    </div>
-                                                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                                        {t(
-                                                                            "رقم العضوية:"
-                                                                        )}{" "}
-                                                                        {member.member_id ||
-                                                                            t(
-                                                                                "غير محدد"
-                                                                            )}{" "}
-                                                                        |{" "}
-                                                                        {member
-                                                                            .cycle
-                                                                            ?.name ||
-                                                                            t(
-                                                                                "بدور"
-                                                                            )}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            {newTask.assigned_to.includes(
-                                                                member.user_id
-                                                            ) && (
-                                                                <CheckCircleIcon className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-                                                            )}
-                                                        </div>
-                                                    )
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                                                {t("لا توجد نتائج")}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {selectedMember && (
-                                        <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-sm font-medium text-green-800 dark:text-green-300">
-                                                        {t("العضو المحدد:")}{" "}
-                                                        {selectedMember.name}
-                                                    </p>
-                                                    <p className="text-xs text-green-600 dark:text-green-400">
-                                                        {t("رقم العضوية:")}{" "}
-                                                        {selectedMember.member_id ||
-                                                            t("غير محدد")}{" "}
-                                                        |{" "}
-                                                        {selectedMember.cycle
-                                                            ?.name || t("بدور")}
-                                                    </p>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setNewTask({
-                                                            ...newTask,
-                                                            assigned_to: null,
-                                                        });
-                                                        setSelectedMember(null);
-                                                    }}
-                                                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                                                >
-                                                    <XMarkIcon className="h-5 w-5" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t("تاريخ التسليم")}
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={newTask.due_date}
-                                        onChange={(e) =>
-                                            setNewTask({
-                                                ...newTask,
-                                                due_date: e.target.value,
-                                            })
-                                        }
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t("إرفاق ملفات")}
-                                    </label>
-                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                                        <input
-                                            type="file"
-                                            multiple
-                                            onChange={(e) =>
-                                                handleFileUpload(e, false)
-                                            }
-                                            className="hidden"
-                                            id="file-upload"
-                                        />
-                                        <label
-                                            htmlFor="file-upload"
-                                            className="cursor-pointer text-primary hover:text-primary-dark"
-                                        >
-                                            <PaperClipIcon className="h-8 w-8 mx-auto mb-2" />
-                                            <span>
-                                                {t(
-                                                    "انقر لرفع الملفات أو اسحبها هنا"
-                                                )}
-                                            </span>
-                                        </label>
-                                    </div>
-                                    <div className="mt-2 space-y-2">
-                                        {fileUploads.map((file, index) => (
-                                            <div
-                                                key={index}
-                                                className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 p-2 rounded"
-                                            >
-                                                <span className="text-sm">
-                                                    {file.name}
-                                                </span>
-                                                <button
-                                                    onClick={() =>
-                                                        removeFile(index, false)
-                                                    }
-                                                    className="text-red-600"
-                                                >
-                                                    <XMarkIcon className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                            {errors &&
-                                Object.entries(errors).map(
-                                    ([field, msgs], i) => (
-                                        <div
-                                            key={i}
-                                            className="bg-red-100 text-red-700 p-2 rounded mb-1 text-sm mx-6"
-                                        >
-                                            {msgs.map((msg, j) => (
-                                                <p key={j}>{msg}</p>
-                                            ))}
-                                        </div>
-                                    )
-                                )}
-                            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3">
-                                <button
-                                    onClick={() => {
-                                        setAddTaskModal(false);
-                                        setMemberNameSearch("");
-                                        setMemberIdSearch("");
-                                        setSelectedMember(null);
-                                    }}
-                                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                                >
-                                    {t("إلغاء")}
-                                </button>
+                <div className="space-y-2">
+                    {currentTasks.length > 0 ? (
+                        currentTasks.map((group) => (
+                            <TaskCard
+                                key={group[0].id}
+                                task={group[0]}
+                                onView={() => handleViewTask(group[0])}
+                                onEdit={canManageTasks ? () => handleEditTask(group[0]) : null}
+                                onDelete={canManageTasks ? () => handleDeleteTask(group[0]) : null}
+                                isAdmin={isAdmin}
+                                canManage={canManageTasks}
+                                isMemberView={!canManageTasks}
+                                userId={userId}
+                            />
+                        ))
+                    ) : (
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                            <DocumentTextIcon className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                            <p className="text-base font-semibold">{t("لا توجد مهام")}</p>
+                            <p className="text-sm">
+                                {selectedMemberFilter 
+                                    ? t(`لا توجد مهام لهذا الموظف`) 
+                                    : canManageTasks 
+                                        ? t("قم بإنشاء أول مهمة لك الآن") 
+                                        : t("ليس لديك مهام مطلوبة حالياً")}
+                            </p>
+                            {canManageTasks && !selectedMemberFilter && (
                                 <button
                                     onClick={handleAddTask}
-                                    disabled={loading}
-                                    className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="mt-3 inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors"
                                 >
-                                    {loading
-                                        ? t("جاري الإضافة...")
-                                        : t("إضافة المهمة")}
+                                    <PlusIcon className="h-4 w-4 ml-1" />
+                                    {t("مهمة جديدة")}
                                 </button>
-                            </div>
+                            )}
                         </div>
-                    </div>
-                )}
-
-                {/* Edit Task Modal */}
-                {editTaskModal && selectedTask && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">
-                                    {t("تعديل المهمة")}
-                                </h3>
-                                <button
-                                    onClick={() => {
-                                        setEditTaskModal(false);
-                                        setSelectedMemberEdit(null);
-                                        setMemberNameSearch("");
-                                        setMemberIdSearch("");
-                                    }}
-                                    className="text-gray-400 hover:text-gray-600 dark:text-gray-300"
-                                >
-                                    <XMarkIcon className="h-6 w-6" />
-                                </button>
-                            </div>
-                            <div className="p-6 space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t("عنوان المهمة")}
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={selectedTask.title}
-                                        onChange={(e) =>
-                                            setSelectedTask({
-                                                ...selectedTask,
-                                                title: e.target.value,
-                                            })
-                                        }
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t("وصف المهمة")}
-                                    </label>
-                                    <textarea
-                                        value={selectedTask.description}
-                                        onChange={(e) =>
-                                            setSelectedTask({
-                                                ...selectedTask,
-                                                description: e.target.value,
-                                            })
-                                        }
-                                        rows={3}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t("اختيار العضو")}
-                                    </label>
-                                    <div>
-                                        <button
-                                            className="bg-primary dark:bg-primary-dark text-white rounded-md p-4 m-2"
-                                            onClick={() =>
-                                                handelSelectedAllEdit()
-                                            }
-                                        >
-                                            {t("تحديد الكل")}
-                                        </button>
-                                        <select
-                                            className="bg-primary px-8 dark:bg-primary-dark text-white rounded-md py-2 m-2"
-                                            onChange={(e) =>
-                                                handelSelectedcycleEdit(
-                                                    e.target.value
-                                                )
-                                            }
-                                            defaultValue=""
-                                        >
-                                            <option value="">
-                                                {t("تحديد حسب القسم")}
-                                            </option>
-                                            {cycles?.map((cycle) => (
-                                                <option
-                                                    key={cycle.id}
-                                                    value={cycle.id}
-                                                >
-                                                    {cycle.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-                                            </div>
-                                            <input
-                                                type="text"
-                                                placeholder={t(
-                                                    "البحث بالاسم..."
-                                                )}
-                                                value={memberNameSearch}
-                                                onChange={(e) =>
-                                                    setMemberNameSearch(
-                                                        e.target.value
-                                                    )
-                                                }
-                                                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                            />
-                                        </div>
-
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-                                            </div>
-                                            <input
-                                                type="text"
-                                                placeholder={t(
-                                                    "البحث برقم العضوية..."
-                                                )}
-                                                value={memberIdSearch}
-                                                onChange={(e) =>
-                                                    setMemberIdSearch(
-                                                        e.target.value
-                                                    )
-                                                }
-                                                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-700 max-h-60 overflow-y-auto">
-                                        {filteredMembers.length > 0 ? (
-                                            <div className="space-y-2">
-                                                {filteredMembers.map(
-                                                    (member) => {
-                                                        const currentAssignees =
-                                                            Array.isArray(
-                                                                selectedTask.assigned_to
-                                                            )
-                                                                ? selectedTask.assigned_to
-                                                                : selectedTask.assigned_to
-                                                                ? [
-                                                                      selectedTask.assigned_to,
-                                                                  ]
-                                                                : [];
-
-                                                        const isSelected =
-                                                            currentAssignees.includes(
-                                                                member.user_id
-                                                            );
-
-                                                        return (
-                                                            <div
-                                                                key={member.id}
-                                                                className={`flex items-center justify-between p-2 rounded cursor-pointer ${
-                                                                    isSelected
-                                                                        ? "bg-primary-100 border border-primary-300 dark:bg-primary-900 dark:border-primary-700"
-                                                                        : "hover:bg-gray-100 dark:hover:bg-gray-600"
-                                                                }`}
-                                                                onClick={() => {
-                                                                    const updatedAssignees =
-                                                                        isSelected
-                                                                            ? currentAssignees.filter(
-                                                                                  (
-                                                                                      id
-                                                                                  ) =>
-                                                                                      id !==
-                                                                                      member.user_id
-                                                                              )
-                                                                            : [
-                                                                                  ...currentAssignees,
-                                                                                  member.user_id,
-                                                                              ];
-
-                                                                    setSelectedTask(
-                                                                        {
-                                                                            ...selectedTask,
-                                                                            assigned_to:
-                                                                                updatedAssignees,
-                                                                        }
-                                                                    );
-                                                                }}
-                                                            >
-                                                                <div className="flex items-center">
-                                                                    <div className="ml-3">
-                                                                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                                            {
-                                                                                member.name
-                                                                            }
-                                                                        </div>
-                                                                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                                            {t(
-                                                                                "رقم العضوية:"
-                                                                            )}{" "}
-                                                                            {member.member_id ||
-                                                                                t(
-                                                                                    "غير محدد"
-                                                                                )}{" "}
-                                                                            |{" "}
-                                                                            {member
-                                                                                .cycle
-                                                                                ?.name ||
-                                                                                t(
-                                                                                    "بدور"
-                                                                                )}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                {isSelected && (
-                                                                    <CheckCircleIcon className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    }
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                                                {t("لا توجد نتائج")}
-                                            </div>
-                                        )}
-                                    </div>
-
-            {selectedTask.assigned_to &&
-                selectedTask.assigned_to.length > 0 && (
-                                            <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="text-sm font-medium text-green-800 dark:text-green-300">
-                                                            {t(
-                                                                "الأعضاء المحددون:"
-                                                            )}{" "}
-                                                            {
-                                                                selectedTask
-                                                                    .assigned_to
-                                                                    .length
-                                                            }
-                                                        </p>
-                                                        <p className="text-xs text-green-600 dark:text-green-400">
-                                                            {selectedTask.assigned_to
-                                                                .map(
-                                                                    (
-                                                                        userId
-                                                                    ) => {
-                                                                        const member =
-                                                                            members.find(
-                                                                                (
-                                                                                    m
-                                                                                ) =>
-                                                                                    m.user_id ===
-                                                                                    userId
-                                                                            );
-                                                                        return member?.name;
-                                                                    }
-                                                                )
-                                                                .filter(Boolean)
-                                                                .join("، ")}
-                                                        </p>
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setSelectedTask({
-                                                                ...selectedTask,
-                                                                assigned_to: [],
-                                                            });
-                                                        }}
-                                                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                                                    >
-                                                        <XMarkIcon className="h-5 w-5" />
-                                                    </button>
-                                                </div>
-                                            </div>
-            )}
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t("تاريخ التسليم")}
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={selectedTask.due_date}
-                                        onChange={(e) =>
-                                            setSelectedTask({
-                                                ...selectedTask,
-                                                due_date: e.target.value,
-                                            })
-                                        }
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t("الملفات الحالية")}
-                                    </label>
-                                    <div className="space-y-2">
-                                        {selectedTask.files &&
-                                        selectedTask.files.length > 0 ? (
-                                            selectedTask.files.map(
-                                                (file, index) => (
-                                                    <div
-                                                        key={index}
-                                                        className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 p-2 rounded"
-                                                    >
-                                                        <div className="flex items-center">
-                                                            <PaperClipIcon className="h-4 w-4 mr-2 text-gray-500" />
-                                                            <span className="text-sm">
-                                                                {file.file_name}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex items-center space-x-2">
-                                                            <a
-                                                                href={`${app_url}/storage/${file.file_path}`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="text-blue-600 hover:text-blue-800"
-                                                            >
-                                                                <EyeIcon className="h-4 w-4" />
-                                                            </a>
-
-                                                        </div>
-                                                    </div>
-                                                )
-                                            )
-                                        ) : (
-                                            <p className="text-gray-500 text-sm">
-                                                {t("لا توجد ملفات مرفقة")}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t("إضافة ملفات جديدة")}
-                                    </label>
-                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                                        <input
-                                            type="file"
-                                            multiple
-                                            onChange={(e) =>
-                                                handleFileUpload(e, true)
-                                            }
-                                            className="hidden"
-                                            id="file-upload-edit"
-                                        />
-                                        <label
-                                            htmlFor="file-upload-edit"
-                                            className="cursor-pointer text-primary hover:text-primary-dark"
-                                        >
-                                            <PaperClipIcon className="h-8 w-8 mx-auto mb-2" />
-                                            <span>
-                                                {t(
-                                                    "انقر لرفع الملفات أو اسحبها هنا"
-                                                )}
-                                            </span>
-                                        </label>
-                                    </div>
-                                    <div className="mt-2 space-y-2">
-                                        {editFileUploads.map((file, index) => (
-                                            <div
-                                                key={index}
-                                                className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 p-2 rounded"
-                                            >
-                                                <span className="text-sm">
-                                                    {file.name}
-                                                </span>
-                                                <button
-                                                    onClick={() =>
-                                                        removeFile(index, true)
-                                                    }
-                                                    className="text-red-600"
-                                                >
-                                                    <XMarkIcon className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {errors &&
-                                Object.entries(errors).map(
-                                    ([field, msgs], i) => (
-                                        <div
-                                            key={i}
-                                            className="bg-red-100 text-red-700 p-2 rounded mb-1 text-sm mx-6"
-                                        >
-                                            {msgs.map((msg, j) => (
-                                                <p key={j}>{msg}</p>
-                                            ))}
-                                        </div>
-                                    )
-                                )}
-
-                            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3">
-                                <button
-                                    onClick={() => {
-                                        setEditTaskModal(false);
-                                        setSelectedMemberEdit(null);
-                                        setMemberNameSearch("");
-                                        setMemberIdSearch("");
-                                    }}
-                                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                                >
-                                    {t("إلغاء")}
-                                </button>
-                                <button
-                                    onClick={handleEditTask}
-                                    disabled={loading}
-                                    className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {loading
-                                        ? t("جاري التعديل...")
-                                        : t("حفظ التعديلات")}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Delete Confirmation Modal */}
-                {deleteTaskModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full">
-                            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">
-                                    {t("تأكيد الحذف")}
-                                </h3>
-                                <button
-                                    onClick={() => setDeleteTaskModal(false)}
-                                    className="text-gray-400 hover:text-gray-600 dark:text-gray-300"
-                                >
-                                    <XMarkIcon className="h-6 w-6" />
-                                </button>
-                            </div>
-                            <div className="p-6">
-                                <p className="text-gray-700 dark:text-gray-300 mb-4">
-                                    {t(
-                                        `هل أنت متأكد من أنك تريد حذف المهمة ${selectedTask[0].title}؟ هذا الإجراء لا يمكن التراجع عنه.`,
-                                        {
-                                            taskTitle: selectedTask[0]?.title,
-                                        }
-                                    )}
-                                </p>
-                            </div>
-                            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3">
-                                <button
-                                    onClick={() => setDeleteTaskModal(false)}
-                                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                                >
-                                    {t("إلغاء")}
-                                </button>
-                                <button
-                                    onClick={handleDeleteTask}
-                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                                >
-                                    {t("حذف")}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-                {/* Edit Task Text Modal */}
-                {modelTaskText && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                                <button
-                                    onClick={() => {
-                                        setModelTaskText(false);
-                                    }}
-                                    className="text-gray-400 hover:text-gray-600 dark:text-gray-300"
-                                >
-                                    <XMarkIcon className="h-6 w-6" />
-                                </button>
-                            </div>
-                            <div className="p-6 space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t("ارسال رد")}
-                                    </label>
-                                    <textarea
-                                        type="text"
-                                        value={tastText.task_text}
-                                        onChange={(e) =>
-                                            setTaskText({
-                                                ...tastText,
-                                                task_text: e.target.value,
-                                            })
-                                        }
-                                        rows={5}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {t("إرفاق ملف")}
-                                    </label>
-                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                                        <input
-                                            type="file"
-                                            onChange={(e) =>
-                                                setTaskText({
-                                                    ...tastText,
-                                                    task_file:
-                                                        e.target.files[0],
-                                                })
-                                            }
-                                            id="file-upload"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                            {errors &&
-                                Object.entries(errors).map(
-                                    ([field, msgs], i) => (
-                                        <div
-                                            key={i}
-                                            className="bg-red-100 text-red-700 p-2 rounded mb-1 text-sm mx-6"
-                                        >
-                                            {msgs.map((msg, j) => (
-                                                <p key={j}>{msg}</p>
-                                            ))}
-                                        </div>
-                                    )
-                                )}
-                            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3">
-                                <button
-                                    onClick={() => {
-                                        setModelTaskText(false);
-                                    }}
-                                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                                >
-                                    {t("إلغاء")}
-                                </button>
-                                <button
-                                    onClick={handleSendTaskText}
-                                    disabled={loading}
-                                    className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {loading
-                                        ? t("جاري الارسال...")
-                                        : t("ارسال  ")}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-             {modelDescription && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full">
-                            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">
-                                    {t(" وصف المهمة")}
-                                </h3>
-                                <button
-                                   onClick={() => {setModelDescription(false);setDescription('');}}
-                                    className="text-gray-400 hover:text-gray-600 dark:text-gray-300"
-                                >
-                                    <XMarkIcon className="h-6 w-6" />
-                                </button>
-                            </div>
-                            <div className="p-6 max-w-md align-top">
-                                <p className="text-gray-700 dark:text-gray-300 mb-4 whitespace-normal break-words">
-                                  {description}
-                                </p>
-                            </div>
-                            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3">
-                                <button
-                                    onClick={() => {setModelDescription(false);setDescription('');}}
-                                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                                >
-                                    {t("إغلاق")}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            <div className="mx-3 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-10">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-6">
-                    {t("لوحة المهام")}
-                </h2>
-                {/* section tasks*/}
-                <div>
-                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">
-                        {t("المهام المطلوبة منك")}
-                    </h3>
-                    <div className="space-y-4">
-                        {tasks.flat()
-                            .filter((task) => task.assigned_to === auth.user.id)
-                            .map((task) => (
-                                <div
-                                    key={task.id}
-                                    className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg flex justify-between items-center"
-                                >
-                                    <div>
-                                        <h4 className="font-medium text-gray-800 dark:text-gray-200">
-                                            {task.title}
-                                        </h4>
-                                        <h4 className="font-medium text-gray-800 dark:text-gray-200">
-                                           <button onClick={() => openDescriptionModal(task.description)} className="px-3 py-1 flex gap-2  bg-primary text-white rounded hover:bg-primary-dark text-sm">
-                                                وصف المهمه
-                                         </button>
-                                        </h4>
-                                        {task.files && task.files.length > 0 ? (
-                                            task.files.map((file, index) => (
-                                                <div
-                                                    key={index}
-                                                    className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 p-2 rounded"
-                                                >
-                                                    <div className="flex items-center">
-                                                        <PaperClipIcon className="h-4 w-4 mr-2 text-gray-500" />
-                                                        <span className="text-sm">
-                                                            {file.file_name}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <a
-                                                            href={`${app_url}/storage/${file.file_path}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="text-blue-600 hover:text-blue-800"
-                                                        >
-                                                            <EyeIcon className="h-4 w-4" />
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <p className="text-gray-500 text-sm">
-                                                {t("لا توجد ملفات مرفقة")}
-                                            </p>
-                                        )}
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                                            {t("يجب التسليم قبل:")}{" "}
-                                            {task.due_date}
-                                        </p>
-                                        <div className="flex flex-wrap gap-2 mt-2">
-                                          المسؤول :   {task?.assignee?.name}
-                                        </div>
-                                        <div className="p-2">
-                                            {getStatusBadge(task.status)}
-                                        </div>
-                                    </div>
-                                    {task.status !== "completed" &&
-                                        task.status !== "overdue" && (
-                                            <div className="flex items-center space-x-2 gap-2">
-                                                <button
-                                                    onClick={() =>
-                                                        handleTaskStatusChange(
-                                                            task.id,
-                                                            "completed"
-                                                        )
-                                                    }
-                                                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark"
-                                                >
-                                                    {t("تم الإكمال")}
-                                                </button>
-                                                <button
-                                                    onClick={() =>
-                                                        handleTaskTextChange(
-                                                            task
-                                                        )
-                                                    }
-                                                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark"
-                                                >
-                                                    {t("رفع رد")}
-                                                </button>
-                                            </div>
-                                        )}
-                                </div>
-                            ))}
-                    </div>
+                    )}
                 </div>
+
+                {/* معلومات العرض والترقيم */}
+                {filteredTasks.length > 0 && (
+                    <div className="mt-4 mb-2 text-sm text-gray-600 dark:text-gray-400 flex items-center gap-4 flex-wrap">
+                        <span>
+                            {t("عرض:")} {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredTasks.length)} {t("من")} {filteredTasks.length}
+                        </span>
+                        {selectedMemberFilter && (
+                            <span className="px-2 py-1 bg-primary/10 text-primary rounded-lg text-xs">
+                                {t("مرشح حسب:")} {members.find(m => m.id === parseInt(selectedMemberFilter))?.name || ''}
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => paginate(currentPage - 1)}
+                                disabled={currentPage === 1}
+                                className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
+                            >
+                                <ChevronRightIcon className="h-4 w-4" />
+                                {t("السابق")}
+                            </button>
+                            
+                            <div className="flex items-center gap-1 mx-2">
+                                {renderPageNumbers()}
+                            </div>
+
+                            <button
+                                onClick={() => paginate(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                                className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
+                            >
+                                {t("التالي")}
+                                <ChevronLeftIcon className="h-4 w-4" />
+                            </button>
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                            {t("صفحة")} {currentPage} {t("من")} {totalPages}
+                        </div>
+                    </div>
+                )}
             </div>
-           {showTasksModel && <TasksModel task={selectedTask} closeModal={closeModal} handleTaskStatusChange={handleTaskStatusChange} />}
+
+            {/* Add Task Modal */}
+            <TaskForm
+                isOpen={addTaskModal}
+                onClose={() => {
+                    setAddTaskModal(false);
+                    setFileUploads([]);
+                    setErrors({});
+                }}
+                onSave={() => handleSaveTask(false)}
+                title={t("إضافة مهمة جديدة")}
+                task={newTask}
+                setTask={setNewTask}
+                members={members}
+                cycles={cycles}
+                loading={saving}
+                errors={errors}
+                fileUploads={fileUploads}
+                setFileUploads={setFileUploads}
+                isEdit={false}
+            />
+
+            {/* Edit Task Modal */}
+            {selectedTask && editTaskModal && (
+                <TaskForm
+                    isOpen={editTaskModal}
+                    onClose={() => {
+                        setEditTaskModal(false);
+                        setSelectedTask(null);
+                        setFileUploads([]);
+                        setErrors({});
+                    }}
+                    onSave={() => handleSaveTask(true)}
+                    title={t("تعديل المهمة")}
+                    task={selectedTask}
+                    setTask={setSelectedTask}
+                    members={members}
+                    cycles={cycles}
+                    loading={saving}
+                    errors={errors}
+                    fileUploads={fileUploads}
+                    setFileUploads={setFileUploads}
+                    existingFiles={selectedTask.files || []}
+                    isEdit={true}
+                />
+            )}
+
+            {/* Tasks Model */}
+            {tasksModel && selectedTaskGroup.length > 0 && (
+                <TasksModel
+                    task={selectedTaskGroup}
+                    closeModal={() => {
+                        setTasksModel(false);
+                        setSelectedTaskGroup([]);
+                    }}
+                    handleTaskStatusChange={handleTaskStatusChange}
+                    canManage={canManageTasks}
+                    userId={userId}
+                />
+            )}
+
+            {/* Confirm Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={closeConfirmModal}
+                onConfirm={confirmModal.onConfirm}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+                confirmColor={confirmModal.confirmColor}
+                icon={confirmModal.icon}
+                loading={confirmModal.loading}
+            />
         </AdminLayout>
     );
 }
