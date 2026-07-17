@@ -40,13 +40,21 @@ class AppServiceProvider extends ServiceProvider
             },
             'permissions' => function () {
                 $user = Auth::user();
+
                 if (!$user) {
-                    return ['permissions' => null];
+                    return [
+                        'permissions' => null,
+                    ];
                 }
+
+                $member = Member::where('user_id', $user->id)
+                    ->with('permission')
+                    ->first();
+
                 return [
                     'permissions' => $member?->permission,
                 ];
-            }
+            },
         ]);
 
             if(env('APP_ENV') === 'production') {
