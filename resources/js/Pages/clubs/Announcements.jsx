@@ -12,7 +12,7 @@ import {
     MegaphoneIcon
 } from "@heroicons/react/24/outline";
 import { useTranslation } from "react-i18next";
-import ConfirmModal from "./Components/ConfirmModal";
+import ConfirmModal from "./components/ConfirmModal";
 
 export default function Announcements() {
     const { app_url, auth, permissions } = usePage().props;

@@ -12,10 +12,10 @@ import {
     FunnelIcon,
 } from "@heroicons/react/24/outline";
 import { useTranslation } from "react-i18next";
-import TaskForm from "./Components/tasks/TaskForm";
-import TaskCard from "./Components/tasks/TaskCard";
-import TasksModel from "./Components/tasks/TasksModel";
-import ConfirmModal from "./Components/ConfirmModal";
+import TaskForm from "./components/tasks/TaskForm";
+import TaskCard from "./components/tasks/TaskCard";
+import TasksModel from "./components/tasks/TasksModel";
+import ConfirmModal from "./components/ConfirmModal";
 
 export default function Tasks() {
     const { app_url, auth,permissions } = usePage().props;

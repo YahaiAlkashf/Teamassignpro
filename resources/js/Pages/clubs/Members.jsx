@@ -15,12 +15,12 @@ import {
 } from "@heroicons/react/24/outline";
 import { useTranslation } from "react-i18next";
 
-import MemberTableRow from "./Components/members/MemberTableRow";
-import MemberDetailsModal from "./Components/members/MemberDetailsModal";
-import MemberModal from "./Components/members/MemberModal";
-import PermissionsModal from "./Components/members/PermissionsModal";
-import AddNoteModal from "./Components/members/AddNoteModal";
-import ConfirmModal from "./Components/ConfirmModal";
+import MemberTableRow from "./components/members/MemberTableRow";
+import MemberDetailsModal from "./components/members/MemberDetailsModal";
+import MemberModal from "./components/members/MemberModal";
+import PermissionsModal from "./components/members/PermissionsModal";
+import AddNoteModal from "./components/members/AddNoteModal";
+import ConfirmModal from "./components/ConfirmModal";
 
 export default function Members() {
     const { app_url, auth ,permissions} = usePage().props;

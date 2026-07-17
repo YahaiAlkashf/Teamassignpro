@@ -11,7 +11,6 @@ import {
 } from "@heroicons/react/24/outline";
 import AdminLayout from "./layout";
 import { useTranslation } from "react-i18next";
-// import EditCompanyDetails from "../RetailFlow/components/EditCompanyDetails";
 
 
 export default function ClubDashboard() {

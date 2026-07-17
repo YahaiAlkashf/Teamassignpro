@@ -13,7 +13,7 @@ import {
 import axios from "axios";
 import { usePage } from "@inertiajs/react";
 import { useTranslation } from "react-i18next";
-import ConfirmModal from "@/Components/ConfirmModal";
+import ConfirmModal from "@/components/ConfirmModal";
 
 export default function TasksModel({ task, closeModal, handleTaskStatusChange, canManage, userId }) {
     const { t } = useTranslation();

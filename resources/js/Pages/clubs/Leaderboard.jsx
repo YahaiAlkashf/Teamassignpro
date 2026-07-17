@@ -14,7 +14,7 @@ import {
     ChevronLeftIcon,
     ChevronRightIcon,
 } from "@heroicons/react/24/outline";
-import ConfirmModal from "./Components/ConfirmModal";
+import ConfirmModal from "./components/ConfirmModal";
 
 export default function Leaderboard() {
     const { app_url, auth, permissions } = usePage().props;
