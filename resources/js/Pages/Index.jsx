@@ -89,8 +89,8 @@ export default function LandingPage() {
         name: "TeamAssign Pro",
         name2: "الباقة المتقدمة",
         description: "باقة متكاملة لإدارة الشركات والمؤسسات مع كافة الأدوات والصلاحيات المتقدمة",
-        priceInsideEgypt: 250,
-        priceInsideEgyptYearly: 2400,
+        priceInsideEgypt: 400,
+        priceInsideEgyptYearly: 2800,
         priceOutsideEgypt: 15,
         priceOutsideEgyptYearly: 144,
         icon: (
