@@ -7,13 +7,12 @@ import AdminLayout from './layout';
 import MemberProfileModel from './components/MemberProfileModel';
 import { useTranslation } from 'react-i18next';
 
-
 export default function Settings({ mustVerifyEmail, status }) {
     const { auth } = usePage().props;
     const { t } = useTranslation();
+
     return (
         <AdminLayout>
-
             <MemberProfileModel />
             <AuthenticatedLayout>
                 <Head title={t("الإعدادات")} />
@@ -31,26 +30,14 @@ export default function Settings({ mustVerifyEmail, status }) {
                             />
                         </div>
 
-
                         <div className="p-6 sm:p-8 bg-white dark:bg-background-card shadow-lg rounded-2xl border border-gray-200 dark:border-gray-700">
                             <h2 className="text-xl font-bold text-primary dark:text-primary-dark mb-4">
                                 {t("تغيير كلمة المرور")}
                             </h2>
                             <UpdatePasswordForm className="max-w-xl" />
                         </div>
-
-
-                        {/* <div className="p-6 sm:p-8 bg-white dark:bg-background-card shadow-lg rounded-2xl border border-gray-200 dark:border-gray-700">
-                            <h2 className="text-xl font-bold text-red-600 dark:text-red-400 mb-4">
-                                {t("حذف الحساب")}
-                            </h2>
-                            <DeleteUserForm className="max-w-xl" />
-                        </div> */}
                     </div>
                 </div>
-
-
-
             </AuthenticatedLayout>
         </AdminLayout>
     );

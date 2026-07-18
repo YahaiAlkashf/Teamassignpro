@@ -12,10 +12,9 @@ import {
 import AdminLayout from "./layout";
 import { useTranslation } from "react-i18next";
 
-
 export default function ClubDashboard() {
     const { app_url, auth } = usePage().props;
-        const { t } = useTranslation();
+    const { t } = useTranslation();
     const [stats, setStats] = useState({
         totalMembers: 0,
         activeMembers: 0,
@@ -35,26 +34,24 @@ export default function ClubDashboard() {
         setLoading(false);
     }, []);
 
-
-
     const showAllMembers = async () => {
-                try {
-                    const response = await axios.get(`${app_url}/members`);
-                    setMembers(response.data.members);
-                } catch (error) {
-                    console.log(t("Error fetching members:"), error);
-                }
+        try {
+            const response = await axios.get(`${app_url}/members`);
+            setMembers(response.data.members);
+        } catch (error) {
+            console.log(t("خطأ في جلب الأعضاء:"), error);
+        }
     };
 
     const showAllEvents = async () => {
-            try {
-                const response = await axios.get(`${app_url}/events`);
-                setEvents(response.data.events);
-
-            } catch (error) {
-                console.log(t("Error fetching events:"), error);
-            }
+        try {
+            const response = await axios.get(`${app_url}/events`);
+            setEvents(response.data.events);
+        } catch (error) {
+            console.log(t("خطأ في جلب الفعاليات:"), error);
+        }
     };
+
     if (loading) {
         return (
             <AdminLayout>
@@ -65,11 +62,9 @@ export default function ClubDashboard() {
         );
     }
 
-
     return (
         <AdminLayout>
             <div className="px-3 max-w-7xl min-h-screen">
-                {/* Header */}
                 <div className="flex items-center justify-between mb-8 p-6 bg-gradient-to-r from-primary to-primary-dark rounded-2xl text-white">
                     <div className="flex items-center">
                         <TrophyIcon className="h-10 w-10 mr-4" />
@@ -91,63 +86,59 @@ export default function ClubDashboard() {
                     </div>
                 </div>
 
-                {/* Statistics Cards */}
-                {(auth.user.role === 'admin')&& (
+                {(auth.user.role === 'admin') && (
                     <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border-l-4 border-blue-500">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-gray-600 dark:text-gray-400">{t("إجمالي الأعضاء")}</p>
-                                <p className="text-3xl font-bold text-gray-800 dark:text-gray-200">
-                                    {members.length}
-                                </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
+                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border-l-4 border-blue-500">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-gray-600 dark:text-gray-400">{t("إجمالي الأعضاء")}</p>
+                                        <p className="text-3xl font-bold text-gray-800 dark:text-gray-200">
+                                            {members.length}
+                                        </p>
+                                    </div>
+                                    <UserGroupIcon className="h-12 w-12 text-blue-500" />
+                                </div>
                             </div>
-                            <UserGroupIcon className="h-12 w-12 text-blue-500" />
-                        </div>
-                    </div>
 
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border-l-4 border-indigo-500">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-gray-600 dark:text-gray-400">{t("إجمالي الفعاليات")}</p>
-                                <p className="text-3xl font-bold text-gray-800 dark:text-gray-200">
-                                    {events.length}
-                                </p>
+                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border-l-4 border-indigo-500">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-gray-600 dark:text-gray-400">{t("إجمالي الفعاليات")}</p>
+                                        <p className="text-3xl font-bold text-gray-800 dark:text-gray-200">
+                                            {events.length}
+                                        </p>
+                                    </div>
+                                    <CalendarDaysIcon className="h-12 w-12 text-indigo-500" />
+                                </div>
                             </div>
-                            <CalendarDaysIcon className="h-12 w-12 text-indigo-500" />
                         </div>
-                    </div>
-                </div>
 
-
-                {/* Quick Actions */}
-                    {/* <EditCompanyDetails /> */}
-                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg">
-                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-6">
-                        {t("إجراءات سريعة")}
-                    </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <Link href='/clubs/members' className="bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-200 p-4 rounded-lg text-center transition-colors">
-                            <UserGroupIcon className="h-8 w-8 mx-auto mb-2" />
-                            <span>{t("إدارة الأعضاء")}</span>
-                        </Link>
-                        <Link href='/clubs/schedule' className="bg-green-100 hover:bg-green-200 dark:bg-green-900 dark:hover:bg-green-800 text-green-700 dark:text-green-200 p-4 rounded-lg text-center transition-colors">
-                            <CalendarDaysIcon className="h-8 w-8 mx-auto mb-2" />
-                            <span>{t("الفعاليات")}</span>
-                        </Link>
-                        <Link href='/clubs/reports' className="bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 text-purple-700 dark:text-purple-200 p-4 rounded-lg text-center transition-colors">
-                            <TrophyIcon className="h-8 w-8 mx-auto mb-2" />
-                            <span>{t("التقارير")}</span>
-                        </Link>
-                        <Link href='/clubs/leaderboard' className="bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900 dark:hover:bg-yellow-800 text-yellow-700 dark:text-yellow-200 p-4 rounded-lg text-center transition-colors">
-                            <ChartBarIcon className="h-8 w-8 mx-auto mb-2" />
-                            <span>{t("الإحصائيات")}</span>
-                        </Link>
-                    </div>
-                </div>
-                     </>
-            )}
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg">
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-6">
+                                {t("إجراءات سريعة")}
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <Link href='/clubs/members' className="bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-200 p-4 rounded-lg text-center transition-colors">
+                                    <UserGroupIcon className="h-8 w-8 mx-auto mb-2" />
+                                    <span>{t("إدارة الأعضاء")}</span>
+                                </Link>
+                                <Link href='/clubs/schedule' className="bg-green-100 hover:bg-green-200 dark:bg-green-900 dark:hover:bg-green-800 text-green-700 dark:text-green-200 p-4 rounded-lg text-center transition-colors">
+                                    <CalendarDaysIcon className="h-8 w-8 mx-auto mb-2" />
+                                    <span>{t("الفعاليات")}</span>
+                                </Link>
+                                <Link href='/clubs/reports' className="bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 text-purple-700 dark:text-purple-200 p-4 rounded-lg text-center transition-colors">
+                                    <TrophyIcon className="h-8 w-8 mx-auto mb-2" />
+                                    <span>{t("التقارير")}</span>
+                                </Link>
+                                <Link href='/clubs/leaderboard' className="bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900 dark:hover:bg-yellow-800 text-yellow-700 dark:text-yellow-200 p-4 rounded-lg text-center transition-colors">
+                                    <ChartBarIcon className="h-8 w-8 mx-auto mb-2" />
+                                    <span>{t("الإحصائيات")}</span>
+                                </Link>
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
         </AdminLayout>
     );

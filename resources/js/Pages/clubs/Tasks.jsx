@@ -1,4 +1,3 @@
-// pages/admin/Tasks.jsx
 import React, { useState, useEffect } from "react";
 import AdminLayout from "./layout";
 import axios from "axios";
@@ -18,7 +17,7 @@ import TasksModel from "./components/tasks/TasksModel";
 import ConfirmModal from "./components/ConfirmModal";
 
 export default function Tasks() {
-    const { app_url, auth,permissions } = usePage().props;
+    const { app_url, auth, permissions } = usePage().props;
     const { t } = useTranslation();
 
     const [tasks, setTasks] = useState([]);
@@ -31,7 +30,6 @@ export default function Tasks() {
     const [currentPage, setCurrentPage] = useState(1);
     const rowsPerPage = 10;
 
-    // Modal states
     const [addTaskModal, setAddTaskModal] = useState(false);
     const [editTaskModal, setEditTaskModal] = useState(false);
     const [tasksModel, setTasksModel] = useState(false);
@@ -41,7 +39,6 @@ export default function Tasks() {
     const [errors, setErrors] = useState({});
     const [saving, setSaving] = useState(false);
 
-    // Confirm Modal states
     const [confirmModal, setConfirmModal] = useState({
         isOpen: false,
         onConfirm: null,
@@ -52,11 +49,12 @@ export default function Tasks() {
         icon: 'danger',
         loading: false,
     });
+
     const permission = permissions.permissions;
     const isAdmin = auth.user?.role === 'admin';
     const canManageTasks = permission?.add_tasks || isAdmin;
     const userId = auth.user?.id;
-    
+
     const [newTask, setNewTask] = useState({
         title: "",
         description: "",
@@ -91,17 +89,17 @@ export default function Tasks() {
             setTasks(sorted);
             setFilteredTasks(sorted);
         } catch (error) {
-            console.error("Error fetching tasks:", error);
+            console.error(t("خطأ في جلب المهام:"), error);
         }
     };
 
     const fetchMembers = async () => {
         try {
             const response = await axios.get(`${app_url}/members`);
-            console.log("Members data:", response.data.members);
+            console.log(t("بيانات الأعضاء:"), response.data.members);
             setMembers(response.data.members || []);
         } catch (error) {
-            console.error("Error fetching members:", error);
+            console.error(t("خطأ في جلب الأعضاء:"), error);
         }
     };
 
@@ -110,7 +108,7 @@ export default function Tasks() {
             const response = await axios.get(`${app_url}/cycles`);
             setCycles(response.data.cycles || []);
         } catch (error) {
-            console.error("Error fetching cycles:", error);
+            console.error(t("خطأ في جلب الأقسام:"), error);
         }
     };
 
@@ -119,7 +117,7 @@ export default function Tasks() {
             await axios.post(`${app_url}/tasks/${taskId}/status`, { status });
             await fetchTasks();
         } catch (error) {
-            console.error("Error updating task status:", error);
+            console.error(t("خطأ في تحديث حالة المهمة:"), error);
         }
     };
 
@@ -134,7 +132,6 @@ export default function Tasks() {
 
     useEffect(() => {
         let filtered = tasks.filter((group) => {
-     
             const matchesSearch = group.some(
                 (task) =>
                     task.title?.toLowerCase().includes(searchTask.toLowerCase()) ||
@@ -142,14 +139,11 @@ export default function Tasks() {
                     task.assigned_to?.toString().includes(searchTask)
             );
 
-         
             let matchesMember = true;
             if (selectedMemberFilter) {
                 const filterValue = parseInt(selectedMemberFilter);
                 matchesMember = group.some((task) => {
-
                     const taskAssignedTo = parseInt(task.assigned_to);
-                    
                     const member = members.find(m => m.user_id === taskAssignedTo);
                     return member && member.id === filterValue;
                 });
@@ -157,11 +151,10 @@ export default function Tasks() {
 
             return matchesSearch && matchesMember;
         });
-        
+
         setFilteredTasks(filtered);
         setCurrentPage(1);
     }, [searchTask, selectedMemberFilter, tasks, members]);
-
 
     const paginate = (pageNumber) => {
         if (pageNumber >= 1 && pageNumber <= totalPages) {
@@ -206,7 +199,6 @@ export default function Tasks() {
         return pageNumbers;
     };
 
- 
     const resetFilters = () => {
         setSearchTask("");
         setSelectedMemberFilter("");
@@ -227,14 +219,14 @@ export default function Tasks() {
     };
 
     const handleEditTask = (task) => {
-        const taskGroup = tasks.find(group => 
+        const taskGroup = tasks.find(group =>
             group.some(t => t.id === task.id || t.task_id === task.task_id)
         );
-        
-        const assignedToArray = taskGroup 
+
+        const assignedToArray = taskGroup
             ? taskGroup.map(t => Number(t.assigned_to)).filter(Boolean)
             : [];
-        
+
         setSelectedTask({
             ...task,
             assigned_to: assignedToArray,
@@ -245,7 +237,7 @@ export default function Tasks() {
     };
 
     const handleViewTask = (task) => {
-        const taskGroup = tasks.find(group => 
+        const taskGroup = tasks.find(group =>
             group.some(t => t.id === task.id || t.task_id === task.task_id)
         );
         setSelectedTaskGroup(taskGroup || [task]);
@@ -262,7 +254,7 @@ export default function Tasks() {
             isOpen: true,
             onConfirm: () => handleDeleteConfirm(task),
             title: t("هل أنت متأكد من حذف هذه المهمة؟"),
-            message: `سيتم حذف المهمة "${task.title}" وجميع بياناتها نهائياً. هذا الإجراء لا يمكن التراجع عنه.`,
+            message: t(`سيتم حذف المهمة "${task.title}" وجميع بياناتها نهائياً. هذا الإجراء لا يمكن التراجع عنه.`),
             confirmText: t("حذف"),
             confirmColor: "bg-red-600 hover:bg-red-700",
             icon: "danger",
@@ -282,7 +274,7 @@ export default function Tasks() {
             setSelectedTask(null);
             await fetchTasks();
         } catch (error) {
-            console.error("Error deleting task:", error);
+            console.error(t("خطأ في حذف المهمة:"), error);
             setConfirmModal((prev) => ({ ...prev, loading: false }));
         }
     };
@@ -295,8 +287,8 @@ export default function Tasks() {
             const formData = new FormData();
             const taskData = isEdit ? selectedTask : newTask;
 
-            const assignedToArray = Array.isArray(taskData.assigned_to) 
-                ? taskData.assigned_to 
+            const assignedToArray = Array.isArray(taskData.assigned_to)
+                ? taskData.assigned_to
                 : [];
 
             if (!taskData.title || !taskData.due_date || assignedToArray.length === 0) {
@@ -364,9 +356,6 @@ export default function Tasks() {
                     <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
                         <DocumentTextIcon className="h-5 w-5 text-primary" />
                         {canManageTasks ? t("إدارة المهام") : t("المهام المطلوبة مني")}
-                        {/* <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
-                            ({filteredTasks.length})
-                        </span> */}
                     </h2>
                     {canManageTasks && (
                         <button
@@ -379,7 +368,6 @@ export default function Tasks() {
                     )}
                 </div>
 
-                {/* Search and Filters */}
                 <div className="flex flex-col sm:flex-row gap-3 mb-4">
                     <div className="flex-1">
                         <input
@@ -390,7 +378,7 @@ export default function Tasks() {
                             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white dark:bg-gray-600 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
                         />
                     </div>
-                    
+
                     {canManageTasks && members.length > 0 && (
                         <div className="sm:w-64">
                             <select
@@ -408,7 +396,6 @@ export default function Tasks() {
                         </div>
                     )}
 
-                    {/* Reset Filter Button */}
                     {(searchTask || selectedMemberFilter) && (
                         <button
                             onClick={resetFilters}
@@ -440,10 +427,10 @@ export default function Tasks() {
                             <DocumentTextIcon className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
                             <p className="text-base font-semibold">{t("لا توجد مهام")}</p>
                             <p className="text-sm">
-                                {selectedMemberFilter 
-                                    ? t(`لا توجد مهام لهذا الموظف`) 
-                                    : canManageTasks 
-                                        ? t("قم بإنشاء أول مهمة لك الآن") 
+                                {selectedMemberFilter
+                                    ? t("لا توجد مهام لهذا الموظف")
+                                    : canManageTasks
+                                        ? t("قم بإنشاء أول مهمة لك الآن")
                                         : t("ليس لديك مهام مطلوبة حالياً")}
                             </p>
                             {canManageTasks && !selectedMemberFilter && (
@@ -459,7 +446,6 @@ export default function Tasks() {
                     )}
                 </div>
 
-                {/* معلومات العرض والترقيم */}
                 {filteredTasks.length > 0 && (
                     <div className="mt-4 mb-2 text-sm text-gray-600 dark:text-gray-400 flex items-center gap-4 flex-wrap">
                         <span>
@@ -473,7 +459,6 @@ export default function Tasks() {
                     </div>
                 )}
 
-                {/* Pagination */}
                 {totalPages > 1 && (
                     <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
                         <div className="flex items-center gap-2">
@@ -485,7 +470,7 @@ export default function Tasks() {
                                 <ChevronRightIcon className="h-4 w-4" />
                                 {t("السابق")}
                             </button>
-                            
+
                             <div className="flex items-center gap-1 mx-2">
                                 {renderPageNumbers()}
                             </div>
@@ -506,7 +491,6 @@ export default function Tasks() {
                 )}
             </div>
 
-            {/* Add Task Modal */}
             <TaskForm
                 isOpen={addTaskModal}
                 onClose={() => {
@@ -527,7 +511,6 @@ export default function Tasks() {
                 isEdit={false}
             />
 
-            {/* Edit Task Modal */}
             {selectedTask && editTaskModal && (
                 <TaskForm
                     isOpen={editTaskModal}
@@ -552,7 +535,6 @@ export default function Tasks() {
                 />
             )}
 
-            {/* Tasks Model */}
             {tasksModel && selectedTaskGroup.length > 0 && (
                 <TasksModel
                     task={selectedTaskGroup}
@@ -566,7 +548,6 @@ export default function Tasks() {
                 />
             )}
 
-            {/* Confirm Modal */}
             <ConfirmModal
                 isOpen={confirmModal.isOpen}
                 onClose={closeConfirmModal}

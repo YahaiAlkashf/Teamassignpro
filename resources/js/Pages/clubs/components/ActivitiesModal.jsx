@@ -34,8 +34,13 @@ export default function ActivitiesModal({ member, closeModal }) {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
                 <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                    <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">{t("أنشطة العضو")} - {member.name}</h3>
-                    <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 transition-transform hover:rotate-90">
+                    <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">
+                        {t("أنشطة العضو")} - {member.name}
+                    </h3>
+                    <button 
+                        onClick={closeModal} 
+                        className="text-gray-400 hover:text-gray-600 dark:text-gray-300 transition-transform hover:rotate-90"
+                    >
                         <XMarkIcon className="h-6 w-6" />
                     </button>
                 </div>
@@ -67,8 +72,6 @@ export default function ActivitiesModal({ member, closeModal }) {
                                         </span>
                                     </div>
 
-                                    {/* <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{event.description}</p> */}
-
                                     <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
                                         <span>{formatDate(event.date)}</span>
                                         <div className="flex items-center">
@@ -92,7 +95,12 @@ export default function ActivitiesModal({ member, closeModal }) {
                 </div>
 
                 <div className="p-6 border-t border-gray-200 dark:border-gray-700">
-                    <button onClick={closeModal} className="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">{t("إغلاق")}</button>
+                    <button 
+                        onClick={closeModal} 
+                        className="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+                    >
+                        {t("إغلاق")}
+                    </button>
                 </div>
             </div>
         </div>

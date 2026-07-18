@@ -1,4 +1,3 @@
-// pages/admin/Members.jsx
 import React, { useState, useEffect, useRef } from "react";
 import AdminLayout from "./layout";
 import axios from "axios";
@@ -33,7 +32,6 @@ export default function Members() {
     const [currentPage, setCurrentPage] = useState(1);
     const rowsPerPage = 10;
 
-    // Modal states
     const [addModal, setAddModal] = useState(false);
     const [editModal, setEditModal] = useState(false);
     const [deleteModal, setDeleteModal] = useState(false);
@@ -44,12 +42,10 @@ export default function Members() {
     const [selectedMember, setSelectedMember] = useState(null);
     const [errors, setErrors] = useState({});
 
-    // Cycles states
     const [cycles, setCycles] = useState([]);
     const [newCycle, setNewCycle] = useState("");
     const [editingCycle, setEditingCycle] = useState(null);
 
-    // Confirm Modal states
     const [confirmModal, setConfirmModal] = useState({
         isOpen: false,
         onConfirm: null,
@@ -62,7 +58,6 @@ export default function Members() {
         errorMessage: null, 
     });
 
-    // Member form state
     const [memberForm, setMemberForm] = useState({
         name: "",
         email: "",
@@ -82,6 +77,7 @@ export default function Members() {
         manage_notes: 0,
         manage_leaderboard: 0,
     });
+
     const permission = permissions?.permissions;
     const canManageMembers = auth.user?.role === 'admin' || permission?.manage_members;
 
@@ -92,7 +88,7 @@ export default function Members() {
             setMembers(response.data.members || []);
             setFilteredMembers(response.data.members || []);
         } catch (error) {
-            console.error("Error fetching members:", error);
+            console.error(t("خطأ في جلب الأعضاء:"), error);
         } finally {
             setLoading(false);
         }
@@ -103,7 +99,7 @@ export default function Members() {
             const response = await axios.get(`${app_url}/cycles`);
             setCycles(response.data.cycles || []);
         } catch (error) {
-            console.error("Error fetching cycles:", error);
+            console.error(t("خطأ في جلب الأقسام:"), error);
         }
     };
 
@@ -132,7 +128,6 @@ export default function Members() {
     const currentMembers = filteredMembers.slice(indexOfFirstMember, indexOfLastMember);
     const totalPages = Math.ceil(filteredMembers.length / rowsPerPage);
 
-    
     const paginate = (pageNumber) => {
         if (pageNumber >= 1 && pageNumber <= totalPages) {
             setCurrentPage(pageNumber);
@@ -143,7 +138,6 @@ export default function Members() {
         }
     };
 
-  
     const renderPageNumbers = () => {
         const pageNumbers = [];
         const maxVisiblePages = 5;
@@ -250,7 +244,7 @@ export default function Members() {
             setNewCycle("");
             fetchCycles();
         } catch (error) {
-            console.error("Error adding cycle:", error);
+            console.error(t("خطأ في إضافة القسم:"), error);
         }
     };
 
@@ -263,10 +257,9 @@ export default function Members() {
             fetchCycles();
             setEditingCycle(null);
         } catch (error) {
-            console.error("Error editing cycle:", error);
+            console.error(t("خطأ في تعديل القسم:"), error);
         }
     };
-
 
     const handleDeleteCycle = (cycle) => {
         setConfirmModal({
@@ -289,7 +282,7 @@ export default function Members() {
             setConfirmModal(prev => ({ ...prev, isOpen: false, loading: false }));
             fetchCycles();
         } catch (error) {
-            console.error("Error deleting cycle:", error);
+            console.error(t("خطأ في حذف القسم:"), error);
             let errorMessage = t("حدث خطأ أثناء حذف القسم");
             
             if (error.response?.data?.message) {
@@ -345,7 +338,7 @@ export default function Members() {
             isOpen: true,
             onConfirm: () => handleDeleteConfirm(member.id),
             title: t("هل أنت متأكد من حذف هذا العضو؟"),
-            message: `سيتم حذف العضو "${member.name}" وجميع بياناته نهائياً. هذا الإجراء لا يمكن التراجع عنه.`,
+            message: t(`سيتم حذف العضو "${member.name}" وجميع بياناته نهائياً. هذا الإجراء لا يمكن التراجع عنه.`),
             confirmText: t("حذف"),
             confirmColor: "bg-red-600 hover:bg-red-700",
             icon: "danger",
@@ -366,7 +359,7 @@ export default function Members() {
             closeModal();
             fetchMembers();
         } catch (error) {
-            console.error("Error deleting member:", error);
+            console.error(t("خطأ في حذف العضو:"), error);
             let errorMessage = t("حدث خطأ أثناء حذف العضو");
             
             if (error.response?.data?.message) {
@@ -414,8 +407,8 @@ export default function Members() {
             });
             fetchMembers();
         } catch (error) {
-            console.error("Error saving note:", error);
-            throw new Error(error.response?.data?.message || "حدث خطأ");
+            console.error(t("خطأ في حفظ الملاحظة:"), error);
+            throw new Error(error.response?.data?.message || t("حدث خطأ"));
         }
     };
 
@@ -428,12 +421,12 @@ export default function Members() {
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement("a");
             link.href = url;
-            link.setAttribute("download", `أعضاء_${new Date().toISOString().split("T")[0]}.xlsx`);
+            link.setAttribute("download", `${t("أعضاء")}_${new Date().toISOString().split("T")[0]}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();
         } catch (error) {
-            console.error("Error exporting Excel:", error);
+            console.error(t("خطأ في تصدير Excel:"), error);
         }
     };
 
@@ -447,12 +440,11 @@ export default function Members() {
         );
     }
     if(!canManageMembers){
-        return
+        return;
     }
     return (
         <AdminLayout>
             <div className="mx-3 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 mb-10">
-                {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">
                         {t("إدارة الأعضاء")}
@@ -487,7 +479,6 @@ export default function Members() {
                     </div>
                 </div>
 
-                {/* Search */}
                 <div className="flex items-center gap-3 mb-4">
                     <input
                         type="text"
@@ -498,7 +489,6 @@ export default function Members() {
                     />
                 </div>
 
-                {/* معلومات العرض */}
                 {filteredMembers.length > 0 && (
                     <div className="mb-3 text-sm text-gray-600 dark:text-gray-400">
                         <span>
@@ -507,7 +497,6 @@ export default function Members() {
                     </div>
                 )}
 
-                {/* Table */}
                 <div className="overflow-x-auto">
                     <table className="min-w-full">
                         <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
@@ -544,7 +533,6 @@ export default function Members() {
                     )}
                 </div>
 
-                {/* Pagination */}
                 {totalPages > 1 && (
                     <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
                         <div className="flex items-center gap-2">
@@ -577,7 +565,6 @@ export default function Members() {
                 )}
             </div>
 
-            {/* Roles Modal */}
             {rolesModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full">
@@ -682,7 +669,6 @@ export default function Members() {
                 </div>
             )}
 
-            {/* Member Modals */}
             {addModal && (
                 <MemberModal
                     title={t("إضافة عضو جديد")}
@@ -723,7 +709,6 @@ export default function Members() {
                 />
             )}
 
-            {/* Confirm Modal */}
             <ConfirmModal
                 isOpen={confirmModal.isOpen}
                 onClose={closeConfirmModal}

@@ -26,20 +26,20 @@ export default function UserManagement() {
             setErrors(error.response?.data?.errors || {});
         }
     };
-const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-        await axios.post("/retailflow/users", form);
-        fetchUsers();
-        setForm({ name: "", email: "", password: ""});
-        setErrors({});
-    } catch (error) {
-        if (error.response && error.response.status === 422) {
-            setErrors(error.response.data.errors);
-        }
-    }
-};
 
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            await axios.post("/retailflow/users", form);
+            fetchUsers();
+            setForm({ name: "", email: "", password: ""});
+            setErrors({});
+        } catch (error) {
+            if (error.response && error.response.status === 422) {
+                setErrors(error.response.data.errors);
+            }
+        }
+    };
 
     const deleteUser = async (id) => {
         await axios.delete(`/retailflow/users/${id}`);
@@ -96,13 +96,10 @@ const handleSubmit = async (e) => {
                     }
                 />
 
-
-
                 <button className="bg-primary hover:bg-primary-dark text-white px-6 py-2 rounded-lg shadow-md transition-colors duration-300">
                     {t("اضافة مستخدم")}
                 </button>
             </form>
-
 
             <h3 className="text-xl font-semibold mt-10 mb-4">
                 {t("قائمة المستخدمين")}

@@ -1,4 +1,3 @@
-// resources/js/pages/admin/Notes.jsx
 import React, { useState, useEffect } from "react";
 import AdminLayout from "./layout";
 import axios from "axios";
@@ -57,7 +56,7 @@ export default function Notes() {
             setNotes(response.data.notes || []);
             setFilteredNotes(response.data.notes || []);
         } catch (error) {
-            console.error("Error fetching notes:", error);
+            console.error(t("خطأ في جلب الملاحظات:"), error);
         } finally {
             setLoading(false);
         }
@@ -154,7 +153,7 @@ export default function Notes() {
             isOpen: true,
             onConfirm: () => handleDeleteConfirm(note),
             title: t("هل أنت متأكد من حذف هذه الملاحظة؟"),
-            message: `سيتم حذف الملاحظة "${note.title}" نهائياً. هذا الإجراء لا يمكن التراجع عنه.`,
+            message: t(`سيتم حذف الملاحظة "${note.title}" نهائياً. هذا الإجراء لا يمكن التراجع عنه.`),
             confirmText: t("حذف"),
             confirmColor: "bg-red-600 hover:bg-red-700",
             icon: "warning",
@@ -174,7 +173,7 @@ export default function Notes() {
             closeConfirmModal();
             fetchNotes();
         } catch (error) {
-            console.error("Error deleting note:", error);
+            console.error(t("خطأ في حذف الملاحظة:"), error);
             let errorMessage = t("حدث خطأ أثناء حذف الملاحظة");
             
             if (error.response?.data?.message) {
@@ -199,7 +198,7 @@ export default function Notes() {
             await axios.post(`${app_url}/notes/${note.id}/toggle-pin`);
             fetchNotes();
         } catch (error) {
-            console.error("Error toggling pin:", error);
+            console.error(t("خطأ في تغيير حالة التثبيت:"), error);
         }
     };
 
@@ -223,7 +222,7 @@ export default function Notes() {
             if (error.response?.data?.errors) {
                 setFormErrors(error.response.data.errors);
             } else {
-                console.error("Error saving note:", error);
+                console.error(t("خطأ في حفظ الملاحظة:"), error);
             }
         } finally {
             setSaving(false);

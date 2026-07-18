@@ -138,7 +138,7 @@ export default function Schedules() {
             setEvents(response.data.events);
             applyCurrentFilter(response.data.events);
         } catch (error) {
-            console.log(error);
+            console.log(t("خطأ في جلب الفعاليات:"), error);
         }
     };
 
@@ -286,7 +286,7 @@ export default function Schedules() {
             setConfirmModal(prev => ({ ...prev, isOpen: false, loading: false }));
             showAllEvents();
         } catch (error) {
-            console.log(error);
+            console.log(t("خطأ في تحديث الحضور:"), error);
             setConfirmModal(prev => ({ ...prev, loading: false }));
         }
     };
@@ -356,7 +356,7 @@ export default function Schedules() {
             showAllEvents();
             closeModal();
         } catch (error) {
-            console.log(error);
+            console.log(t("خطأ في حذف الفعالية:"), error);
         }
     };
 
@@ -689,7 +689,7 @@ export default function Schedules() {
                                             onClick={() => openDescriptionModal(event.description)} 
                                             className="px-3 py-1 flex gap-2 bg-primary text-white rounded hover:bg-primary-dark text-sm"
                                         >
-                                            عرض وصف النشاط
+                                            {t("عرض وصف النشاط")}
                                         </button>
                                     </td>
                                     <td className="px-4 py-3 text-xs font-semibold text-gray-600 dark:text-gray-300 text-center">

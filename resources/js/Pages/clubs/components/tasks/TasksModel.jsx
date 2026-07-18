@@ -1,4 +1,3 @@
-// components/tasks/TasksModel.jsx
 import React, { useState } from "react";
 import { 
     XMarkIcon, 
@@ -25,7 +24,6 @@ export default function TasksModel({ task, closeModal, handleTaskStatusChange, c
     const [description, setDescription] = useState('');
     const [descriptionTitle, setDescriptionTitle] = useState('');
     
-    // States for reply modal
     const [taskTextModal, setTaskTextModal] = useState(false);
     const [currentTask, setCurrentTask] = useState(null);
     const [taskText, setTaskText] = useState('');
@@ -33,13 +31,12 @@ export default function TasksModel({ task, closeModal, handleTaskStatusChange, c
     const [sending, setSending] = useState(false);
     const [replyErrors, setReplyErrors] = useState({});
 
-    // Confirm Modal for member completion
     const [confirmModal, setConfirmModal] = useState({
         isOpen: false,
         onConfirm: null,
         title: '',
         message: '',
-        confirmText: 'تأكيد',
+        confirmText: '',
         confirmColor: 'bg-green-600 hover:bg-green-700',
         icon: 'info',
         loading: false,
@@ -188,7 +185,6 @@ export default function TasksModel({ task, closeModal, handleTaskStatusChange, c
         <>
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
-                    {/* Header */}
                     <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
                         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
                             {t("تفاصيل المهمة")}
@@ -201,7 +197,6 @@ export default function TasksModel({ task, closeModal, handleTaskStatusChange, c
                         </button>
                     </div>
 
-                    {/* Content */}
                     <div className="p-6 overflow-auto max-h-[60vh]">
                         {task.length === 0 ? (
                             <div className="text-center py-8">
@@ -320,7 +315,6 @@ export default function TasksModel({ task, closeModal, handleTaskStatusChange, c
                                                     </td>
 
                                                     <td className="px-4 py-4 whitespace-nowrap text-center">
-                                                        {/* للموظف العادي - أزرار إكمال وإرسال رد (يمنع الإكمال لو متأخرة) */}
                                                         {!canManage && ta.assigned_to === userId && ta.status !== 'completed' && ta.status !== 'overdue' && (
                                                             <div className="flex flex-col gap-1 items-center">
                                                                 <button
@@ -338,28 +332,24 @@ export default function TasksModel({ task, closeModal, handleTaskStatusChange, c
                                                             </div>
                                                         )}
                                                         
-                                                        {/* للموظف العادي - إذا كان مكتمل */}
                                                         {!canManage && ta.assigned_to === userId && ta.status === 'completed' && (
                                                             <span className="text-xs text-green-600 dark:text-green-400 font-medium">
                                                                 ✅ {t("مكتمل")}
                                                             </span>
                                                         )}
                                                         
-                                                        {/* للموظف العادي - إذا كانت متأخرة */}
                                                         {!canManage && ta.assigned_to === userId && ta.status === 'overdue' && (
                                                             <span className="text-xs text-red-600 dark:text-red-400 font-medium">
                                                                 ⚠️ {t("متأخرة")}
                                                             </span>
                                                         )}
                                                         
-                                                        {/* للموظف العادي - مهام ليست له */}
                                                         {!canManage && ta.assigned_to !== userId && (
                                                             <span className="text-xs text-gray-400">
                                                                 {t("للإطلاع")}
                                                             </span>
                                                         )}
 
-                                                        {/* للمدير أو مدير المهام */}
                                                         {canManage && (
                                                             <button
                                                                 onClick={() => handleShowStatusEdit(ta)}
@@ -378,7 +368,6 @@ export default function TasksModel({ task, closeModal, handleTaskStatusChange, c
                         )}
                     </div>
 
-                    {/* Footer */}
                     <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
                         <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -394,7 +383,6 @@ export default function TasksModel({ task, closeModal, handleTaskStatusChange, c
                     </div>
                 </div>
 
-                {/* Change Status Modal (for admin/manager) */}
                 {showModel && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white dark:bg-gray-800 flex flex-col justify-center items-center rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] p-6">
@@ -433,7 +421,6 @@ export default function TasksModel({ task, closeModal, handleTaskStatusChange, c
                     </div>
                 )}
 
-                {/* Description Modal - عرض الوصف كامل */}
                 {modelDescription && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full">
@@ -476,7 +463,6 @@ export default function TasksModel({ task, closeModal, handleTaskStatusChange, c
                     </div>
                 )}
 
-                {/* Reply Modal for members */}
                 {taskTextModal && currentTask && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full p-6">
@@ -553,7 +539,6 @@ export default function TasksModel({ task, closeModal, handleTaskStatusChange, c
                 )}
             </div>
 
-            {/* Confirm Modal for member completion */}
             <ConfirmModal
                 isOpen={confirmModal.isOpen}
                 onClose={closeConfirmModal}

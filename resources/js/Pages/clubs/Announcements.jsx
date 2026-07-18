@@ -1,4 +1,3 @@
-// resources/js/pages/clubs/Announcements.jsx
 import React, { useState, useEffect } from "react";
 import AdminLayout from "./layout";
 import axios from "axios";
@@ -48,7 +47,7 @@ export default function Announcements() {
             const response = await axios.get(`${app_url}/announcement`);
             setCurrentAnnouncement(response.data.announcement || "");
         } catch (error) {
-            console.error(t("Error fetching announcement:"), error);
+            console.error(t("خطأ في جلب الإعلان:"), error);
         }
     };
 
@@ -65,7 +64,7 @@ export default function Announcements() {
             setEditAnnouncementMode(false);
             await fetchAnnouncement();
         } catch (error) {
-            console.error(t("Error saving announcement:"), error);
+            console.error(t("خطأ في حفظ الإعلان:"), error);
         } finally {
             setLoading(false);
         }
@@ -102,7 +101,7 @@ export default function Announcements() {
             closeConfirmModal();
             await fetchAnnouncement();
         } catch (error) {
-            console.error(t("Error deleting announcement:"), error);
+            console.error(t("خطأ في حذف الإعلان:"), error);
             let errorMessage = t("حدث خطأ أثناء حذف الإعلان");
             
             if (error.response?.data?.message) {

@@ -1,4 +1,3 @@
-// components/Sidebar.jsx
 import React from "react";
 import { Link, usePage } from "@inertiajs/react";
 import {
@@ -19,10 +18,11 @@ import {
 import { useTranslation } from "react-i18next";
 
 export default function Sidebar({ isOpen, setIsOpen }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { url } = usePage();
-    const { auth, app_url,permissions } = usePage().props;
+    const { auth, app_url, permissions } = usePage().props;
     const sidebarWidth = isOpen ? "w-64" : "w-20";
+    const dir = i18n.language === 'ar' ? 'rtl' : 'ltr';
     
     const isActive = (path) => {
         if (path === '/clubs') {
@@ -89,10 +89,11 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             )}
 
             <aside
-                className={`fixed top-0 right-0 h-full z-40 flex flex-col
+                className={`fixed top-0 h-full z-40 flex flex-col
                     bg-white dark:bg-gray-900 shadow-2xl transition-all duration-300
-                    ${sidebarWidth} ${isOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
-                    border-l border-gray-200 dark:border-gray-700`}
+                    ${sidebarWidth} ${isOpen ? 'translate-x-0' : (dir === 'rtl' ? 'translate-x-full' : '-translate-x-full') + ' lg:translate-x-0'}
+                    ${dir === 'rtl' ? 'right-0 border-l' : 'left-0 border-r'}
+                    border-gray-200 dark:border-gray-700`}
             >
                 <div className={`flex items-center ${isOpen ? 'justify-between' : 'justify-center'} px-4 py-3 border-b border-gray-200 dark:border-gray-700`}>
                     <span className={`text-xl font-bold text-primary dark:text-primary-light transition-all duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>
@@ -128,14 +129,17 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                                 </span>
                                 
                                 {!isOpen && (
-                                    <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3
+                                    <div className={`absolute top-1/2 -translate-y-1/2 
+                                        ${dir === 'rtl' ? 'right-full mr-3' : 'left-full ml-3'}
                                         opacity-0 invisible group-hover:opacity-100 group-hover:visible
-                                        transition-all duration-300 z-50">
+                                        transition-all duration-300 z-50`}>
                                         <div className="bg-gray-900 text-white text-sm font-medium py-1.5 px-3
                                             rounded-lg shadow-lg whitespace-nowrap relative">
                                             {item.name}
-                                            <div className="absolute top-1/2 -right-1 -translate-y-1/2
-                                                w-2 h-2 bg-gray-900 rotate-45"></div>
+                                            <div className={`absolute top-1/2 -translate-y-1/2
+                                                w-2 h-2 bg-gray-900 rotate-45
+                                                ${dir === 'rtl' ? '-left-1' : '-right-1'}`}>
+                                            </div>
                                         </div>
                                     </div>
                                 )}

@@ -1,4 +1,3 @@
-// components/reports/ReportForm.jsx
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { XMarkIcon, PaperClipIcon, EyeIcon } from "@heroicons/react/24/outline";
@@ -23,7 +22,6 @@ export default function ReportForm({
     const { app_url } = usePage().props;
     const [dateError, setDateError] = useState('');
 
-    // التحقق من صحة التواريخ
     const validateDates = (periodStart, periodEnd) => {
         if (periodStart && periodEnd) {
             const start = new Date(periodStart);
@@ -51,7 +49,7 @@ export default function ReportForm({
 
     const handleFileUpload = (e) => {
         const uploadedFiles = Array.from(e.target.files);
-        const maxSize = 10 * 1024 * 1024; // 10 MB
+        const maxSize = 10 * 1024 * 1024;
         const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 
                              'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                              'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -63,16 +61,16 @@ export default function ReportForm({
 
         uploadedFiles.forEach(file => {
             if (file.size > maxSize) {
-                errorFiles.push(`${file.name} (حجمه كبير جداً، الحد الأقصى 10 ميجابايت)`);
+                errorFiles.push(`${file.name} (${t('حجمه كبير جداً، الحد الأقصى 10 ميجابايت')})`);
             } else if (!allowedTypes.includes(file.type)) {
-                errorFiles.push(`${file.name} (نوع غير مسموح)`);
+                errorFiles.push(`${file.name} (${t('نوع غير مسموح')})`);
             } else {
                 validFiles.push(file);
             }
         });
 
         if (errorFiles.length > 0) {
-            alert(`الملفات التالية غير صالحة:\n${errorFiles.join('\n')}`);
+            alert(`${t('الملفات التالية غير صالحة')}:\n${errorFiles.join('\n')}`);
         }
 
         if (validFiles.length > 0) {
@@ -191,7 +189,6 @@ export default function ReportForm({
                     )}
                 </div>
 
-                {/* الملفات الموجودة (في حالة التعديل) */}
                 {isEdit && existingFiles && existingFiles.length > 0 && (
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

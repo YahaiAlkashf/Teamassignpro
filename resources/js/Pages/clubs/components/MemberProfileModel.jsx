@@ -273,7 +273,6 @@ export default function MemberProfileModel() {
         (task) => task.status === "pending"
     ).length;
 
-
     const approvedReports = myReports.filter((r) => r.status === "approved").length;
     const rejectedReports = myReports.filter((r) => r.status === "rejected").length;
     const pendingReports = myReports.filter(
@@ -299,9 +298,7 @@ export default function MemberProfileModel() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-               
                 <div className="lg:col-span-2 space-y-6">
-                 
                     <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
                         <div className="flex items-center gap-4 mb-6">
                             <div className="relative">
@@ -310,7 +307,7 @@ export default function MemberProfileModel() {
                                         <>
                                             <img
                                                 src={`${app_url}/storage/${member.image}`}
-                                                alt="image"
+                                                alt={t("الصورة الشخصية")}
                                                 className="h-20 w-20 rounded-full object-cover"
                                             />
                                             <div
@@ -450,7 +447,6 @@ export default function MemberProfileModel() {
                         </div>
                     </div>
 
-                    {/* الملاحظات */}
                     <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
                         <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
                             <DocumentTextIcon className="h-5 w-5 text-primary" />
@@ -511,9 +507,7 @@ export default function MemberProfileModel() {
                     </div>
                 </div>
 
-                {/* العمود الأيسر - الإحصائيات */}
                 <div className="space-y-6">
-                    {/* إحصائيات التقارير */}
                     <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
                         <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
                             <PaperAirplaneIcon className="h-5 w-5 text-primary" />
@@ -572,7 +566,6 @@ export default function MemberProfileModel() {
                         </div>
                     </div>
 
-                    {/* إحصائيات المهام والفعاليات */}
                     <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
                         <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
                             {t("الإحصائيات")}
@@ -628,7 +621,6 @@ export default function MemberProfileModel() {
                 </div>
             </div>
 
-       
             {modelImage && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full">
@@ -667,7 +659,6 @@ export default function MemberProfileModel() {
                     </div>
                 </div>
             )}
-
 
             {showNoteModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">

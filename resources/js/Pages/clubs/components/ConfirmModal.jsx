@@ -1,4 +1,3 @@
-// components/ConfirmModal.jsx
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { XMarkIcon, ExclamationTriangleIcon, XCircleIcon } from "@heroicons/react/24/outline";
@@ -14,7 +13,7 @@ export default function ConfirmModal({
     confirmColor = "bg-red-600 hover:bg-red-700",
     icon = "warning",
     loading = false,
-    errorMessage = null, 
+    errorMessage = null,
 }) {
     const { t } = useTranslation();
 
@@ -55,7 +54,6 @@ export default function ConfirmModal({
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-up">
-                {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                     <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">
                         {errorMessage ? t("خطأ") : title}
@@ -69,14 +67,12 @@ export default function ConfirmModal({
                     </button>
                 </div>
 
-                {/* Body */}
                 <div className="p-6">
                     <div className="flex flex-col items-center text-center">
                         <div className={`p-3 rounded-full ${getIconBg()} mb-4`}>
                             {getIcon()}
                         </div>
                         {errorMessage ? (
-                          
                             <div className="w-full">
                                 <p className="text-red-600 dark:text-red-400 font-semibold mb-2">
                                     {t("حدث خطأ أثناء العملية")}
@@ -93,7 +89,6 @@ export default function ConfirmModal({
                     </div>
                 </div>
 
-                {/* Footer */}
                 <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-3">
                     <button
                         onClick={onClose}

@@ -1,4 +1,3 @@
-// components/tasks/TaskDetailsModal.jsx
 import React from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -51,7 +50,6 @@ export default function TaskDetailsModal({ task, onClose }) {
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
                     <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">
                         {t("تفاصيل المهمة")}
@@ -65,7 +63,6 @@ export default function TaskDetailsModal({ task, onClose }) {
                 </div>
 
                 <div className="p-6 space-y-4">
-                    {/* العنوان والحالة */}
                     <div>
                         <div className="flex items-start justify-between">
                             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">
@@ -75,7 +72,6 @@ export default function TaskDetailsModal({ task, onClose }) {
                         </div>
                     </div>
 
-                    {/* الوصف */}
                     {task.description && (
                         <div>
                             <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
@@ -89,7 +85,6 @@ export default function TaskDetailsModal({ task, onClose }) {
                         </div>
                     )}
 
-                    {/* المعلومات */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                             <UserCircleIcon className="h-5 w-5 text-primary" />
@@ -140,7 +135,6 @@ export default function TaskDetailsModal({ task, onClose }) {
                         </div>
                     </div>
 
-                    {/* الملفات المرفقة */}
                     {task.files && task.files.length > 0 && (
                         <div>
                             <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
@@ -172,7 +166,6 @@ export default function TaskDetailsModal({ task, onClose }) {
                         </div>
                     )}
 
-                    {/* إحصائيات إضافية */}
                     <div className="grid grid-cols-3 gap-3">
                         <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                             <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
@@ -200,7 +193,6 @@ export default function TaskDetailsModal({ task, onClose }) {
                         </div>
                     </div>
 
-             
                     {task.task_text && (
                         <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-r-4 border-yellow-500">
                             <h4 className="text-sm font-semibold text-yellow-700 dark:text-yellow-300 mb-1">

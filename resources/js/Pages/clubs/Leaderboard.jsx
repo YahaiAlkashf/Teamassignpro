@@ -1,4 +1,3 @@
-// resources/js/pages/clubs/Leaderboard.jsx
 import React, { useState, useEffect } from "react";
 import AdminLayout from "./layout";
 import axios from "axios";
@@ -54,21 +53,21 @@ export default function Leaderboard() {
     const canManageLeaderboard = isAdmin || permission?.manage_leaderboard;
 
     const criteriaOptions = [
-        { value: 'tasks', label: 'المهام المكتملة' },
-        { value: 'events', label: 'الأحداث المحضورة' },
-        { value: 'rating', label: 'التقييم' },
-        { value: 'daily_reports', label: 'التقارير اليومية المقبولة' },
-        { value: 'weekly_reports', label: 'التقارير الأسبوعية المقبولة' },
-        { value: 'monthly_reports', label: 'التقارير الشهرية المقبولة' },
-        { value: 'custom_reports', label: 'التقارير المخصصة المقبولة' },
-        { value: 'all_reports', label: 'جميع التقارير المقبولة' },
+        { value: 'tasks', label: t('المهام المكتملة') },
+        { value: 'events', label: t('الأحداث المحضورة') },
+        { value: 'rating', label: t('التقييم') },
+        { value: 'daily_reports', label: t('التقارير اليومية المقبولة') },
+        { value: 'weekly_reports', label: t('التقارير الأسبوعية المقبولة') },
+        { value: 'monthly_reports', label: t('التقارير الشهرية المقبولة') },
+        { value: 'custom_reports', label: t('التقارير المخصصة المقبولة') },
+        { value: 'all_reports', label: t('جميع التقارير المقبولة') },
     ];
 
     const timePeriods = [
-        { value: 'weekly', label: 'أسبوعي' },
-        { value: 'monthly', label: 'شهري' },
-        { value: 'yearly', label: 'سنوي' },
-        { value: 'all', label: 'كل الوقت' },
+        { value: 'weekly', label: t('أسبوعي') },
+        { value: 'monthly', label: t('شهري') },
+        { value: 'yearly', label: t('سنوي') },
+        { value: 'all', label: t('كل الوقت') },
     ];
 
     const fetchData = async () => {
@@ -82,7 +81,7 @@ export default function Leaderboard() {
                 setCanManage(canManageLeaderboard);
             }
         } catch (error) {
-            console.error("Error fetching leaderboard:", error);
+            console.error(t("خطأ في جلب لوحة الشرف:"), error);
         } finally {
             setLoading(false);
         }
@@ -159,7 +158,7 @@ export default function Leaderboard() {
                 fetchData();
             }
         } catch (error) {
-            console.error("Error saving settings:", error);
+            console.error(t("خطأ في حفظ الإعدادات:"), error);
         } finally {
             setSavingSettings(false);
         }
@@ -187,7 +186,7 @@ export default function Leaderboard() {
                 fetchData();
             }
         } catch (error) {
-            console.error("Error saving note:", error);
+            console.error(t("خطأ في حفظ الملاحظة:"), error);
         } finally {
             setSavingNote(false);
         }
@@ -202,7 +201,7 @@ export default function Leaderboard() {
                 fetchData();
             }
         } catch (error) {
-            console.error("Error deleting note:", error);
+            console.error(t("خطأ في حذف الملاحظة:"), error);
         } finally {
             setConfirmModal(prev => ({ ...prev, loading: false }));
         }
@@ -235,14 +234,14 @@ export default function Leaderboard() {
     const renderScoreDetails = (item) => {
         const details = [];
         const criteriaMap = {
-            tasks: { icon: '📋', label: 'المهام' },
-            events: { icon: '📅', label: 'الأحداث' },
-            rating: { icon: '⭐', label: 'التقييم' },
-            daily_reports: { icon: '📊', label: 'تقارير يومية' },
-            weekly_reports: { icon: '📊', label: 'تقارير أسبوعية' },
-            monthly_reports: { icon: '📊', label: 'تقارير شهرية' },
-            custom_reports: { icon: '📊', label: 'تقارير مخصصة' },
-            all_reports: { icon: '📊', label: 'جميع التقارير' },
+            tasks: { icon: '📋', label: t('المهام') },
+            events: { icon: '📅', label: t('الأحداث') },
+            rating: { icon: '⭐', label: t('التقييم') },
+            daily_reports: { icon: '📊', label: t('تقارير يومية') },
+            weekly_reports: { icon: '📊', label: t('تقارير أسبوعية') },
+            monthly_reports: { icon: '📊', label: t('تقارير شهرية') },
+            custom_reports: { icon: '📊', label: t('تقارير مخصصة') },
+            all_reports: { icon: '📊', label: t('جميع التقارير') },
         };
 
         const activeCriteria = settings?.criteria || ['tasks', 'rating', 'events', 'all_reports'];
@@ -366,15 +365,15 @@ export default function Leaderboard() {
                                 <h3 className="text-xl font-bold">{item.name}</h3>
                                 <p className="text-sm opacity-90">{item.medal_label}</p>
                                 <div className="mt-2 space-y-1 text-sm">
-                                    <p>⭐ {item.rating} نقطة من التقييم</p>
+                                    <p>⭐ {item.rating} {t("نقطة من التقييم")}</p>
                                     {settings?.criteria?.includes('tasks') && (
-                                        <p>📋 {item.scores?.tasks || 0} نقطة من المهام</p>
+                                        <p>📋 {item.scores?.tasks || 0} {t("نقطة من المهام")}</p>
                                     )}
                                     {settings?.criteria?.includes('events') && (
-                                        <p>📅 {item.scores?.events || 0} نقطة من الأحداث</p>
+                                        <p>📅 {item.scores?.events || 0} {t("نقطة من الأحداث")}</p>
                                     )}
                                     {settings?.criteria?.some(c => c.includes('reports')) && (
-                                        <p>📊 {item.scores?.all_reports || item.scores?.daily_reports || item.scores?.weekly_reports || item.scores?.monthly_reports || 0} نقطة من التقارير</p>
+                                        <p>📊 {item.scores?.all_reports || item.scores?.daily_reports || item.scores?.weekly_reports || item.scores?.monthly_reports || 0} {t("نقطة من التقارير")}</p>
                                     )}
                                 </div>
                                 <p className="text-3xl font-bold mt-3">
@@ -400,7 +399,7 @@ export default function Leaderboard() {
                         )}
                         {settings && (
                             <span className="px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-lg text-xs">
-                                {t("الفترة:")} {timePeriods.find(p => p.value === settings.time_period)?.label || 'كل الوقت'}
+                                {t("الفترة:")} {timePeriods.find(p => p.value === settings.time_period)?.label || t('كل الوقت')}
                             </span>
                         )}
                     </div>
@@ -418,24 +417,24 @@ export default function Leaderboard() {
                                 </th>
                                 <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                                     {t("التقييم")}
-                                    <span className="text-xs font-normal text-gray-400 block">(1 نقطة لكل نجمة)</span>
+                                    <span className="text-xs font-normal text-gray-400 block">{t("(1 نقطة لكل نجمة)")}</span>
                                 </th>
                                 {settings?.criteria?.includes('tasks') && (
                                     <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                                         {t("المهام")}
-                                        <span className="text-xs font-normal text-gray-400 block">(1 نقطة لكل مهمة)</span>
+                                        <span className="text-xs font-normal text-gray-400 block">{t("(1 نقطة لكل مهمة)")}</span>
                                     </th>
                                 )}
                                 {settings?.criteria?.includes('events') && (
                                     <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                                         {t("الأحداث")}
-                                        <span className="text-xs font-normal text-gray-400 block">(1 نقطة لكل حدث)</span>
+                                        <span className="text-xs font-normal text-gray-400 block">{t("(1 نقطة لكل حدث)")}</span>
                                     </th>
                                 )}
                                 {settings?.criteria?.some(c => c.includes('reports')) && (
                                     <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                                         {t("التقارير")}
-                                        <span className="text-xs font-normal text-gray-400 block">(1 نقطة لكل تقرير)</span>
+                                        <span className="text-xs font-normal text-gray-400 block">{t("(1 نقطة لكل تقرير)")}</span>
                                     </th>
                                 )}
                                 <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
@@ -490,14 +489,14 @@ export default function Leaderboard() {
                                                 {'⭐'.repeat(Math.min(Math.round(item.rating), 5))}
                                                 <span className="mr-1 text-sm font-bold">{item.rating}</span>
                                             </div>
-                                            <span className="text-xs text-green-600 dark:text-green-400">+{item.rating} نقطة</span>
+                                            <span className="text-xs text-green-600 dark:text-green-400">+{item.rating} {t("نقطة")}</span>
                                         </div>
                                     </td>
                                     {settings?.criteria?.includes('tasks') && (
                                         <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300">
                                             <div className="flex flex-col items-end">
                                                 <span className="font-bold">{item.scores?.tasks || 0}</span>
-                                                <span className="text-xs text-green-600 dark:text-green-400">+{item.scores?.tasks || 0} نقطة</span>
+                                                <span className="text-xs text-green-600 dark:text-green-400">+{item.scores?.tasks || 0} {t("نقطة")}</span>
                                             </div>
                                         </td>
                                     )}
@@ -505,7 +504,7 @@ export default function Leaderboard() {
                                         <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300">
                                             <div className="flex flex-col items-end">
                                                 <span className="font-bold">{item.scores?.events || 0}</span>
-                                                <span className="text-xs text-green-600 dark:text-green-400">+{item.scores?.events || 0} نقطة</span>
+                                                <span className="text-xs text-green-600 dark:text-green-400">+{item.scores?.events || 0} {t("نقطة")}</span>
                                             </div>
                                         </td>
                                     )}
@@ -524,7 +523,7 @@ export default function Leaderboard() {
                                                       item.scores?.daily_reports || 
                                                       item.scores?.weekly_reports || 
                                                       item.scores?.monthly_reports || 
-                                                      item.scores?.custom_reports || 0} نقطة
+                                                      item.scores?.custom_reports || 0} {t("نقطة")}
                                                 </span>
                                             </div>
                                         </td>

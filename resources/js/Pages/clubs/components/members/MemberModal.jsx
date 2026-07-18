@@ -1,8 +1,9 @@
-
 import React, { useEffect, useState } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useTranslation } from "react-i18next";
 import { usePage } from "@inertiajs/react";
+import axios from "axios";
+
 export default function MemberModal({
     title,
     member,
@@ -15,6 +16,7 @@ export default function MemberModal({
     const { t } = useTranslation();
     const [cycles, setCycles] = useState([]);
     const { app_url, auth } = usePage().props;
+
     const fetchCycles = async () => {
         try {
             const response = await axios.get(`${app_url}/cycles`);
@@ -23,9 +25,11 @@ export default function MemberModal({
             console.error("Error fetching cycles:", error);
         }
     };
-    useEffect(()=>{
+
+    useEffect(() => {
         fetchCycles();
-    },[])
+    }, []);
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-end z-50">
             <div className="bg-white dark:bg-gray-800 overflow-y-auto h-full shadow-2xl max-w-md w-full p-6 space-y-4 animate-slide-in-right">
@@ -41,7 +45,6 @@ export default function MemberModal({
                     </button>
                 </div>
 
-            
                 <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {t("الاسم")} <span className="text-red-500">*</span>
@@ -70,7 +73,6 @@ export default function MemberModal({
                     {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email[0]}</p>}
                 </div>
 
-               
                 {!isEdit && (
                     <>
                         <div>
@@ -136,7 +138,6 @@ export default function MemberModal({
                     </>
                 )}
 
-      
                 <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {t("رقم الهاتف")}
@@ -151,7 +152,6 @@ export default function MemberModal({
                     {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone[0]}</p>}
                 </div>
 
-        
                 <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {t("الرقم التعريفي (ID)")}
@@ -166,7 +166,6 @@ export default function MemberModal({
                     {errors.member_id && <p className="text-red-500 text-xs mt-1">{errors.member_id[0]}</p>}
                 </div>
 
-               
                 <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {t("القسم")}
@@ -186,7 +185,6 @@ export default function MemberModal({
                     {errors.cycle_id && <p className="text-red-500 text-xs mt-1">{errors.cycle_id[0]}</p>}
                 </div>
 
-           
                 <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {t("المسمى الوظيفي")}
@@ -201,7 +199,6 @@ export default function MemberModal({
                     {errors.jop_title && <p className="text-red-500 text-xs mt-1">{errors.jop_title[0]}</p>}
                 </div>
 
-                {/* التقييم */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {t("التقييم")} <span className="text-red-500">*</span>
@@ -238,7 +235,6 @@ export default function MemberModal({
                     {errors.rating && <p className="text-red-500 text-xs mt-1">{errors.rating[0]}</p>}
                 </div>
 
-                {/* الصلاحيات */}
                 <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                     <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                         {t("الصلاحيات")}
@@ -341,7 +337,6 @@ export default function MemberModal({
                     </div>
                 </div>
 
-                {/* الأخطاء */}
                 {Object.keys(errors).length > 0 && (
                     <div className="bg-red-100 text-red-700 p-3 rounded-lg text-sm">
                         {Object.values(errors).flat().map((error, index) => (
@@ -350,7 +345,6 @@ export default function MemberModal({
                     </div>
                 )}
 
-                {/* أزرار التحكم */}
                 <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <button
                         onClick={closeModal}

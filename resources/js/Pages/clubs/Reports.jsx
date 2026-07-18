@@ -1,4 +1,3 @@
-// pages/admin/Reports.jsx
 import React, { useState, useEffect } from "react";
 import AdminLayout from "./layout";
 import axios from "axios";
@@ -56,7 +55,7 @@ export default function Reports() {
             setReports(response.data.reports || []);
             setFilteredReports(response.data.reports || []);
         } catch (error) {
-            console.error("Error fetching reports:", error);
+            console.error(t("خطأ في جلب التقارير:"), error);
         } finally {
             setLoading(false);
         }
@@ -173,14 +172,12 @@ export default function Reports() {
     };
 
     const handleDeleteReport = async (report) => {
-      
-            try {
-                await axios.delete(`${app_url}/reports/${report.id}`);
-                fetchReports();
-            } catch (error) {
-                console.error("Error deleting report:", error);
-            }
-        
+        try {
+            await axios.delete(`${app_url}/reports/${report.id}`);
+            fetchReports();
+        } catch (error) {
+            console.error(t("خطأ في حذف التقرير:"), error);
+        }
     };
 
     const handleSaveReport = async (status) => {
@@ -220,7 +217,7 @@ export default function Reports() {
             if (error.response?.data?.errors) {
                 setFormErrors(error.response.data.errors);
             } else {
-                console.error("Error saving report:", error);
+                console.error(t("خطأ في حفظ التقرير:"), error);
             }
         } finally {
             setSaving(false);
@@ -252,19 +249,14 @@ export default function Reports() {
                     <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
                         <DocumentTextIcon className="h-5 w-5 text-primary" />
                         {t("التقارير")}
-                        {/* <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
-                            ({filteredReports.length})
-                        </span> */}
                     </h3>
-                   
-                        <button
-                            onClick={handleAddReport}
-                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors"
-                        >
-                            <PlusIcon className="h-4 w-4 ml-1" />
-                            {t("تقرير جديد")}
-                        </button>
-                 
+                    <button
+                        onClick={handleAddReport}
+                        className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors"
+                    >
+                        <PlusIcon className="h-4 w-4 ml-1" />
+                        {t("تقرير جديد")}
+                    </button>
                 </div>
 
                 <ReportFilters
@@ -287,15 +279,13 @@ export default function Reports() {
                         <DocumentTextIcon className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
                         <p className="text-base font-semibold">{t("لا توجد تقارير")}</p>
                         <p className="text-sm">{t("قم بإنشاء أول تقرير لك الآن")}</p>
-                       
-                            <button
-                                onClick={handleAddReport}
-                                className="mt-3 inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors"
-                            >
-                                <PlusIcon className="h-4 w-4 ml-1" />
-                                {t("تقرير جديد")}
-                            </button>
-                        
+                        <button
+                            onClick={handleAddReport}
+                            className="mt-3 inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors"
+                        >
+                            <PlusIcon className="h-4 w-4 ml-1" />
+                            {t("تقرير جديد")}
+                        </button>
                     </div>
                 ) : (
                     <>

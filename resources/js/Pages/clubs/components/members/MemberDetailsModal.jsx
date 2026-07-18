@@ -1,4 +1,3 @@
-// components/members/MemberDetailsModal.jsx
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -19,7 +18,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { usePage } from "@inertiajs/react";
 import axios from "axios";
-import ConfirmModal from "../ConfirmModal"; // استيراد موديل التأكيد
+import ConfirmModal from "../ConfirmModal";
 
 export default function MemberDetailsModal({ member, onClose, onNoteUpdated }) {
     const { t } = useTranslation();
@@ -30,8 +29,6 @@ export default function MemberDetailsModal({ member, onClose, onNoteUpdated }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [isLoadingNotes, setIsLoadingNotes] = useState(true);
-    
-    // حالة موديل التأكيد
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -123,12 +120,10 @@ export default function MemberDetailsModal({ member, onClose, onNoteUpdated }) {
         }
     };
 
-    // دالة فتح موديل التأكيد
     const handleDeleteClick = () => {
         setShowConfirmModal(true);
     };
 
-    // دالة تأكيد الحذف
     const handleConfirmDelete = async () => {
         setIsDeleting(true);
         try {
@@ -149,7 +144,6 @@ export default function MemberDetailsModal({ member, onClose, onNoteUpdated }) {
         }
     };
 
-    // دالة إلغاء الحذف
     const handleCancelDelete = () => {
         setShowConfirmModal(false);
     };
@@ -169,10 +163,8 @@ export default function MemberDetailsModal({ member, onClose, onNoteUpdated }) {
 
     if (!memberData) return null;
 
-    // التحقق من وجود ملاحظة
     const hasNote = memberData.note !== null && memberData.note !== undefined;
 
-    // حالة التحميل
     if (isLoadingNotes) {
         return (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
@@ -197,7 +189,6 @@ export default function MemberDetailsModal({ member, onClose, onNoteUpdated }) {
         <>
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-                    {/* Header */}
                     <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
                         <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">
                             {t("تفاصيل العضو")}
@@ -211,7 +202,6 @@ export default function MemberDetailsModal({ member, onClose, onNoteUpdated }) {
                     </div>
 
                     <div className="p-6 space-y-4">
-                        {/* Profile Header */}
                         <div className="flex items-center gap-4">
                             <div className="relative">
                                 {memberData.image ? (
@@ -240,7 +230,6 @@ export default function MemberDetailsModal({ member, onClose, onNoteUpdated }) {
                             </div>
                         </div>
 
-                        {/* Info Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                                 <EnvelopeIcon className="h-5 w-5 text-primary" />
@@ -295,7 +284,6 @@ export default function MemberDetailsModal({ member, onClose, onNoteUpdated }) {
                             </div>
                         </div>
 
-                        {/* Stats */}
                         <div className="grid grid-cols-3 gap-3">
                             <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                                 <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
@@ -317,7 +305,6 @@ export default function MemberDetailsModal({ member, onClose, onNoteUpdated }) {
                             </div>
                         </div>
 
-                        {/* Permissions */}
                         {memberData.permission && (
                             <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -352,7 +339,6 @@ export default function MemberDetailsModal({ member, onClose, onNoteUpdated }) {
                             </div>
                         )}
 
-                        {/* Note Section */}
                         <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                             <div className="flex items-center justify-between mb-3">
                                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
@@ -416,7 +402,7 @@ export default function MemberDetailsModal({ member, onClose, onNoteUpdated }) {
                                                             <PencilIcon className="h-4 w-4" />
                                                         </button>
                                                         <button
-                                                            onClick={handleDeleteClick} // استدعاء دالة فتح الموديل
+                                                            onClick={handleDeleteClick}
                                                             className="p-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                                             title={t("حذف")}
                                                         >
@@ -455,7 +441,6 @@ export default function MemberDetailsModal({ member, onClose, onNoteUpdated }) {
                 </div>
             </div>
 
-            {/* موديل تأكيد الحذف */}
             <ConfirmModal
                 isOpen={showConfirmModal}
                 onClose={handleCancelDelete}

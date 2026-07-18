@@ -1,4 +1,3 @@
-// components/reports/ReportDetails.jsx
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { 
@@ -75,18 +74,14 @@ export default function ReportDetails({ report, onClose, onReplyUpdated, isAdmin
         return typeMap[type] || type;
     };
 
-    // ✅ التعديل: صاحب التقرير ميقدرش يرد على تقريره
     const canReply = () => {
         const isOwner = localReport.member_id === currentMemberId;
         const isAdminOrManager = isAdmin || canManage;
         
-        // ❌ صاحب التقرير ميقدرش يرد على تقريره
         if (isOwner) return false;
         
-        // ✅ المدير أو مدير التقارير يقدر يرد (إذا مش صاحب التقرير)
         if (isAdminOrManager) return true;
         
-        // الموظف يرد بس لو في ردود موجودة (يعني الإدارة ردت)
         if (localReport.replies && localReport.replies.length > 0) {
             return localReport.status !== 'draft';
         }
@@ -144,7 +139,6 @@ export default function ReportDetails({ report, onClose, onReplyUpdated, isAdmin
     const handleStatusChange = async (status) => {
         if (localReport.status === status) return;
         
-        // ✅ منع صاحب التقرير من تغيير حالة تقريره
         if (localReport.member_id === currentMemberId) {
             alert(t("لا يمكنك تغيير حالة تقريرك الخاص"));
             return;
@@ -516,7 +510,6 @@ export default function ReportDetails({ report, onClose, onReplyUpdated, isAdmin
                         </div>
                     )}
 
-                    {/* ✅ أزرار تغيير الحالة - للمدير فقط وليس صاحب التقرير */}
                     {(isAdmin || canManage) && localReport.member_id !== currentMemberId && (
                         <div className="flex flex-wrap gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                             <button
@@ -558,7 +551,6 @@ export default function ReportDetails({ report, onClose, onReplyUpdated, isAdmin
                         </div>
                     )}
 
-                    {/* الردود */}
                     <div>
                         <h5 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
                             {t("الردود")} ({localReport.replies?.length || 0})
@@ -576,7 +568,6 @@ export default function ReportDetails({ report, onClose, onReplyUpdated, isAdmin
                         </div>
                     </div>
 
-                    {/* حقل رد جديد - صاحب التقرير مش هيشوفه */}
                     {canReply() && (
                         <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
                             <h5 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">

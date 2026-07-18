@@ -1,4 +1,3 @@
-// components/tasks/TaskForm.jsx
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -35,10 +34,8 @@ export default function TaskForm({
     const [memberIdSearch, setMemberIdSearch] = useState("");
     const [selectedMember, setSelectedMember] = useState(null);
 
-    // جلب الـ user ID الخاص بالشخص الحالي
     const currentUserId = auth?.user?.id;
 
-    // فلترة الأعضاء لإزالة المستخدم الحالي
     const availableMembers = members.filter(
         (member) => Number(member.user_id) !== Number(currentUserId)
     );
@@ -64,14 +61,11 @@ export default function TaskForm({
         const assignedToArray = Array.isArray(task.assigned_to) ? task.assigned_to : [];
         const availableIds = availableMembers.map((member) => Number(member.user_id));
         
-        // التحقق إذا كان جميع الأعضاء المتاحين محددين
         const allSelected = availableIds.every(id => assignedToArray.includes(id));
         
         if (allSelected) {
-            // إلغاء تحديد الكل
             setTask({ ...task, assigned_to: [] });
         } else {
-            // تحديد جميع الأعضاء المتاحين (باستثناء المستخدم الحالي)
             setTask({ ...task, assigned_to: availableIds });
         }
     };
@@ -97,7 +91,6 @@ export default function TaskForm({
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-                {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
                     <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">
                         {title}
@@ -111,7 +104,6 @@ export default function TaskForm({
                 </div>
 
                 <div className="p-6 space-y-4">
-                    {/* عنوان المهمة */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                             {t("عنوان المهمة")} <span className="text-red-500">*</span>
@@ -128,7 +120,6 @@ export default function TaskForm({
                         )}
                     </div>
 
-                    {/* وصف المهمة */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                             {t("وصف المهمة")}
@@ -145,7 +136,6 @@ export default function TaskForm({
                         )}
                     </div>
 
-                    {/* اختيار الأعضاء */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                             {t("اختيار العضو")} <span className="text-red-500">*</span>
@@ -278,7 +268,6 @@ export default function TaskForm({
                         )}
                     </div>
 
-                    {/* تاريخ التسليم */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                             {t("تاريخ التسليم")} <span className="text-red-500">*</span>
@@ -294,7 +283,6 @@ export default function TaskForm({
                         )}
                     </div>
 
-                    {/* الملفات الحالية (في حالة التعديل) */}
                     {isEdit && existingFiles.length > 0 && (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -326,7 +314,6 @@ export default function TaskForm({
                         </div>
                     )}
 
-                    {/* رفع ملفات جديدة */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                             {isEdit ? t("إضافة ملفات جديدة") : t("إرفاق ملفات")}
@@ -377,7 +364,6 @@ export default function TaskForm({
                         )}
                     </div>
 
-                    {/* الأخطاء */}
                     {errors?.general && (
                         <div className="p-3 bg-red-100 text-red-700 rounded-lg text-sm">
                             {errors.general}
@@ -385,7 +371,6 @@ export default function TaskForm({
                     )}
                 </div>
 
-                {/* Footer */}
                 <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex gap-2">
                     <button
                         onClick={onClose}

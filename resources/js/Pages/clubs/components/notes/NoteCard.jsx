@@ -1,4 +1,3 @@
-// resources/js/Components/notes/NoteCard.jsx
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { 
@@ -20,10 +19,8 @@ export default function NoteCard({ note, onEdit, onDelete, onTogglePin, isAdmin,
     const isOwner = note.member_id === currentMemberId;
     const canEdit = isOwner || isAdmin || canManage;
 
-    // Truncate content to one line if not expanded
     const getDisplayContent = () => {
         if (isExpanded) return note.content;
-        // Show first line only
         const firstLine = note.content.split('\n')[0];
         if (firstLine.length > 100) {
             return firstLine.substring(0, 100) + '...';
@@ -67,7 +64,6 @@ export default function NoteCard({ note, onEdit, onDelete, onTogglePin, isAdmin,
                         )}
                     </div>
                     
-                    {/* Content with expand/collapse */}
                     <div className="mt-2">
                         <p className={`text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap ${!isExpanded ? 'line-clamp-1' : ''}`}>
                             {getDisplayContent()}

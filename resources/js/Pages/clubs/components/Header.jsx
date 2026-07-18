@@ -1,4 +1,3 @@
-// components/Header.jsx
 import React, { useContext, useState, useEffect } from "react";
 import {
     SunIcon,
@@ -9,7 +8,6 @@ import {
 } from "@heroicons/react/24/outline";
 import { Link, usePage } from "@inertiajs/react";
 import ThemeContext from "../../../Context/ThemeContext";
-import { CurrencyContext } from "../../../Context/CurrencyContext ";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
 
@@ -21,6 +19,7 @@ export default function Header({ isOpen, setIsOpen, sidebarWidth = 64 }) {
     const [showNotifications, setShowNotifications] = useState(false);
     const [clickedOnce, setClickedOnce] = useState(false);
     const { t, i18n } = useTranslation();
+    const dir = i18n.language === 'ar' ? 'rtl' : 'ltr';
 
     const changeLanguage = (lang) => {
         i18n.changeLanguage(lang);
@@ -59,18 +58,16 @@ export default function Header({ isOpen, setIsOpen, sidebarWidth = 64 }) {
         getNotifications();
     }, []);
 
-    // Calculate header width based on sidebar state
-    const sidebarWidthClass = isOpen ? 'lg:right-64' : 'lg:right-20';
-    const sidebarMarginClass = isOpen ? 'lg:mr-64' : 'lg:mr-20';
-
     return (
         <>
             <header
-                className={`fixed top-0 left-0 right-0 z-30 flex items-center justify-between
+                className={`fixed top-0 z-30 flex items-center justify-between
                     px-4 py-3 bg-white dark:bg-gray-900 shadow-md transition-all duration-300
-                    ${sidebarWidthClass}`}
+                    ${dir === 'rtl' 
+                        ? `left-0 right-0 ${isOpen ? 'mr-0 lg:mr-64' : 'mr-0 lg:mr-20'}` 
+                        : `left-0 right-0 ${isOpen ? 'ml-0 lg:ml-64' : 'ml-0 lg:ml-20'}`
+                    }`}
             >
-                {/* Left side - Company Name & Mobile Menu Button */}
                 <div className="flex items-center gap-3">
                     <button
                         className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors lg:hidden"
@@ -89,9 +86,7 @@ export default function Header({ isOpen, setIsOpen, sidebarWidth = 64 }) {
                     </h1>
                 </div>
 
-                {/* Right side - Controls */}
                 <div className="flex items-center gap-2 sm:gap-3">
-                    {/* Language Selector */}
                     <div className="relative hidden sm:block">
                         <select
                             value={i18n.language}
@@ -111,7 +106,6 @@ export default function Header({ isOpen, setIsOpen, sidebarWidth = 64 }) {
                         </span>
                     </div>
 
-                    {/* Mobile Language Selector */}
                     <div className="relative sm:hidden">
                         <select
                             value={i18n.language}
@@ -131,7 +125,6 @@ export default function Header({ isOpen, setIsOpen, sidebarWidth = 64 }) {
                         </span>
                     </div>
 
-                    {/* Theme Toggle */}
                     <button
                         onClick={toggleTheme}
                         className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -144,7 +137,6 @@ export default function Header({ isOpen, setIsOpen, sidebarWidth = 64 }) {
                         )}
                     </button>
 
-                    {/* Notifications */}
                     <div className="relative">
                         <button
                             onClick={handleBellClick}
@@ -159,7 +151,8 @@ export default function Header({ isOpen, setIsOpen, sidebarWidth = 64 }) {
                         </button>
 
                         {showNotifications && (
-                            <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-72 sm:w-80 max-h-80 overflow-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50">
+                            <div className={`absolute mt-2 w-72 sm:w-80 max-h-80 overflow-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50
+                                ${dir === 'rtl' ? 'left-0' : 'right-0'}`}>
                                 <div className="p-3 border-b border-gray-200 dark:border-gray-700">
                                     <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
                                         {t("الإشعارات")}
@@ -207,7 +200,6 @@ export default function Header({ isOpen, setIsOpen, sidebarWidth = 64 }) {
                         )}
                     </div>
 
-                    {/* Profile Picture */}
                     <Link
                         href="/clubs/memberprofile"
                         className="flex-shrink-0 h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md hover:shadow-lg transition-shadow"
@@ -223,7 +215,6 @@ export default function Header({ isOpen, setIsOpen, sidebarWidth = 64 }) {
                         )}
                     </Link>
 
-                    {/* Logout Button */}
                     <Link
                         href={route("logout")}
                         method="post"
@@ -232,7 +223,6 @@ export default function Header({ isOpen, setIsOpen, sidebarWidth = 64 }) {
                         {t("تسجيل الخروج")}
                     </Link>
 
-                    {/* Mobile Logout */}
                     <Link
                         href={route("logout")}
                         method="post"
@@ -246,7 +236,6 @@ export default function Header({ isOpen, setIsOpen, sidebarWidth = 64 }) {
                 </div>
             </header>
 
-            {/* Spacer for fixed header */}
             <div className="h-14 sm:h-16" />
         </>
     );

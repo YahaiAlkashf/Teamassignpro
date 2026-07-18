@@ -1,4 +1,3 @@
-// resources/js/Components/notes/NoteForm.jsx
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { XMarkIcon } from "@heroicons/react/24/outline";

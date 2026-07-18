@@ -1,4 +1,3 @@
-// components/reports/ReportFilters.jsx
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { MagnifyingGlassIcon, XMarkIcon, UserCircleIcon } from "@heroicons/react/24/outline";
@@ -45,7 +44,7 @@ export default function ReportFilters({ filters, setFilters, onSearch, onReset, 
                         <option value="daily">{t("يومي")}</option>
                         <option value="weekly">{t("اسبوعي")}</option>
                         <option value="monthly">{t("شهري")}</option>
-                         <option value="custom">{t("مخصص")}</option>
+                        <option value="custom">{t("مخصص")}</option>
                     </select>
                 </div>
 
@@ -121,13 +120,6 @@ export default function ReportFilters({ filters, setFilters, onSearch, onReset, 
                     <XMarkIcon className="h-4 w-4" />
                     {t("إعادة تعيين")}
                 </button>
-                {/* <button
-                    onClick={onSearch}
-                    className="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors flex items-center gap-1"
-                >
-                    <MagnifyingGlassIcon className="h-4 w-4" />
-                    {t("بحث")}
-                </button> */}
             </div>
         </div>
     );

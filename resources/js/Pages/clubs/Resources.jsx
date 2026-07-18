@@ -64,7 +64,7 @@ export default function Library() {
             const response = await axios.get(`${app_url}/library/folders`);
             setFolders(response.data.folders);
         } catch (error) {
-            console.log(error);
+            console.log(t("خطأ في جلب المجلدات:"), error);
         }
     };
 
@@ -79,7 +79,7 @@ export default function Library() {
             setCurrentFolder(folderId);
             setCurrentPage(1);
         } catch (error) {
-            console.log(error);
+            console.log(t("خطأ في جلب الملفات:"), error);
         }
     };
 
@@ -171,7 +171,7 @@ export default function Library() {
             isOpen: true,
             onConfirm: () => handleDeleteFileConfirm(file),
             title: t("هل أنت متأكد من حذف هذا الملف؟"),
-            message: `سيتم حذف الملف "${file.name}" نهائياً. هذا الإجراء لا يمكن التراجع عنه.`,
+            message: t(`سيتم حذف الملف "${file.name}" نهائياً. هذا الإجراء لا يمكن التراجع عنه.`),
             confirmText: t("حذف"),
             confirmColor: "bg-red-600 hover:bg-red-700",
             icon: "warning",
@@ -191,7 +191,7 @@ export default function Library() {
             closeConfirmModal();
             showFilesInFolder(currentFolder);
         } catch (error) {
-            console.error("Error deleting file:", error);
+            console.error(t("خطأ في حذف الملف:"), error);
             let errorMessage = t("حدث خطأ أثناء حذف الملف");
             
             if (error.response?.data?.message) {
@@ -264,7 +264,7 @@ export default function Library() {
 
             closeModal();
         } catch (error) {
-            console.log(error);
+            console.log(t("خطأ في حذف المجلد:"), error);
         }
     };
 
@@ -311,16 +311,16 @@ export default function Library() {
         selectedFiles.forEach(file => {
             const extension = file.name.split('.').pop().toLowerCase();
             if (file.size > maxSize) {
-                errorFiles.push(`${file.name} (حجمه كبير جداً، الحد الأقصى 10 ميجابايت)`);
+                errorFiles.push(`${file.name} (${t("حجمه كبير جداً، الحد الأقصى 10 ميجابايت")})`);
             } else if (!allowedExtensions.includes(extension)) {
-                errorFiles.push(`${file.name} (نوع غير مسموح)`);
+                errorFiles.push(`${file.name} (${t("نوع غير مسموح")})`);
             } else {
                 validFiles.push(file);
             }
         });
 
         if (errorFiles.length > 0) {
-            alert(`الملفات التالية غير صالحة:\n${errorFiles.join('\n')}`);
+            alert(`${t("الملفات التالية غير صالحة")}:\n${errorFiles.join('\n')}`);
         }
 
         setUploadFiles(validFiles);
