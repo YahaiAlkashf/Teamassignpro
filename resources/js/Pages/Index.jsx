@@ -3,6 +3,8 @@ import { Head, Link } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { useTranslation } from "react-i18next";
 import { useState } from 'react';
+import axios from 'axios';
+import { usePage } from '@inertiajs/react';
 import { 
     SparklesIcon, 
     CheckCircleIcon, 
@@ -34,11 +36,24 @@ export default function LandingPage() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isEgypt, setIsEgypt] = useState(true);
     const [type, setType] = useState("monthly");
+    const [isLoading, setIsLoading] = useState(true);
+    const [allPlans, setAllPlans] = useState([]);
+    const { app_url } = usePage().props;
 
     const changeLanguage = (lang) => {
         i18n.changeLanguage(lang);
         localStorage.setItem("i18nextLng", lang);
         setLanguage(lang);
+    };
+
+    // جلب الباقات من API
+    const showAllPlans = async () => {
+        try {
+            const response = await axios.get(`${app_url}/plans`);
+            setAllPlans(response.data.plans);
+        } catch (error) {
+            console.log(error);
+        }
     };
 
     useEffect(() => {
@@ -48,10 +63,15 @@ export default function LandingPage() {
             .then((res) => res.json())
             .then((data) => {
                 setIsEgypt(data.country_code === "EG");
+                setIsLoading(false);
             })
             .catch((err) => {
                 console.log(err);
+                setIsLoading(false);
             });
+        
+        // جلب الباقات
+        showAllPlans();
     }, [language]);
 
     useEffect(() => {
@@ -85,38 +105,42 @@ export default function LandingPage() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    // العثور على الباقة المتقدمة
+    const advancedPlan = allPlans.find(plan => plan.name === "advanced");
+
     const plan = {
-        name: "TeamAssign Pro",
-        name2: "الباقة المتقدمة",
-        description: "باقة متكاملة لإدارة الشركات والمؤسسات مع كافة الأدوات والصلاحيات المتقدمة",
-        priceInsideEgypt: 400,
-        priceInsideEgyptYearly: 2800,
-        priceOutsideEgypt: 15,
-        priceOutsideEgyptYearly: 144,
+        name2: t("الباقة المتقدمة"),
+        name: "advanced",
+        description: t("باقة متكاملة لإدارة الشركات والمؤسسات مع كافة الأدوات والصلاحيات المتقدمة"),
+        priceInsideEgypt: advancedPlan?.price_in_egp || 0,
+        priceInsideEgyptYearly: advancedPlan?.price_year_in_egp || 0,
+        priceOutsideEgypt: advancedPlan?.price_outside_egp || 0,
+        priceOutsideEgyptYearly: advancedPlan?.price_year_outside_egp || 0,
         icon: (
             <svg className="w-16 h-16 mx-auto text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
         ),
         features: [
-            "إدارة الفرق والمشاريع بشكل متكامل",
-            "صلاحيات متقدمة للتحكم الكامل",
-            "توزيع المهام ومتابعة الأداء",
-            "إشعارات فورية للتحديثات والمهام",
-            "دعم فني 24/7 عبر واتساب",
-            "اضافة عدد غير محدود من الموظفين(المستخدمين)",
-            "تخطيط الفعاليات والأنشطة",
-            "مكتبة مركزية للملفات",
-            "تقارير وإحصائيات متقدمة",
-            "لوحة تحكم شاملة وسهلة الاستخدام",
-            "نظام إدارة الملاحظات",
-            "لوحة الشرف لتحفيز الموظفين",
-            "إدارة الإعلانات الداخلية",
-            "تكامل مع أدوات خارجية عبر API",
+            t("إدارة الفرق والمشاريع بشكل متكامل"),
+            t("صلاحيات متقدمة للتحكم الكامل"),
+            t("توزيع المهام ومتابعة الأداء"),
+            t("إشعارات فورية للتحديثات والمهام"),
+            t("دعم فني 24/7 عبر واتساب"),
+            t("اضافة عدد غير محدود من الموظفين(المستخدمين)"),
+            t("تخطيط الفعاليات والأنشطة"),
+            t("مكتبة مركزية للملفات"),
+            t("تقارير وإحصائيات متقدمة"),
+            t("لوحة تحكم شاملة وسهلة الاستخدام"),
+            t("نظام إدارة الملاحظات"),
+            t("لوحة الشرف لتحفيز الموظفين"),
+            t("إدارة الإعلانات الداخلية"),
+            t("تكامل مع أدوات خارجية عبر API"),
         ]
     };
 
     const getPrice = () => {
+        if (!advancedPlan) return 0;
         if (type === 'yearly') {
             return isEgypt ? plan.priceInsideEgyptYearly : plan.priceOutsideEgyptYearly;
         }
@@ -124,7 +148,7 @@ export default function LandingPage() {
     };
 
     const getPriceLabel = () => {
-        return type === 'yearly' ? 'سنوياً' : 'شهرياً';
+        return type === 'yearly' ? t('سنوياً') : t('شهرياً');
     };
 
     return (
@@ -142,10 +166,10 @@ export default function LandingPage() {
                 <meta name="twitter:description" content="منصة SaaS متكاملة لإدارة الفرق والمشاريع." />
             </Head>
 
-            {/* Header */}
+            {/* Header - نفس الكود موجود */}
             <header className="bg-black/50 backdrop-blur-lg border-b border-zinc-800/50 py-4 px-4 md:px-10 flex justify-between items-center sticky top-0 z-50">
                 <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
-                   < div className='flex gap-2 justify-center items-center'>
+                   <div className='flex gap-2 justify-center items-center'>
                     <span>TeamAssign Pro</span>
                     <img src="logo.png" className="w-10 h-10" />
                     </div>
@@ -206,7 +230,7 @@ export default function LandingPage() {
                 </div>
             </header>
 
-            {/* Mobile Menu */}
+            {/* Mobile Menu - نفس الكود */}
             <div className={`md:hidden fixed inset-0 z-40 transition-transform duration-300 ease-in-out ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                 <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)}></div>
                 <div className="absolute top-0 right-0 bottom-0 w-4/5 max-w-sm bg-zinc-900 border-l border-zinc-800 p-6 overflow-y-auto">
@@ -232,15 +256,13 @@ export default function LandingPage() {
                 </div>
             </div>
 
-            {/* Hero Section with Floating Animation */}
+            {/* Hero Section - نفس الكود */}
             <section className="text-center py-16 md:py-32 px-4 md:px-6 relative overflow-hidden">
-                {/* Animated background elements */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-violet-600/5 blur-[150px] animate-pulse-slow"></div>
                     <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-indigo-600/5 blur-[120px] animate-float-slow"></div>
                     <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-violet-600/5 blur-[120px] animate-float-slower"></div>
                     
-                    {/* Floating orbs */}
                     <div className="absolute top-20 left-10 w-20 h-20 rounded-full bg-violet-500/10 blur-3xl animate-float-orbit"></div>
                     <div className="absolute bottom-20 right-10 w-32 h-32 rounded-full bg-indigo-500/10 blur-3xl animate-float-orbit-delay"></div>
                     <div className="absolute top-1/2 left-1/4 w-16 h-16 rounded-full bg-violet-400/5 blur-2xl animate-float-orbit-2"></div>
@@ -303,10 +325,6 @@ export default function LandingPage() {
                         <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">40%</div>
                         <p className="text-zinc-400 text-sm mt-1">زيادة الإنتاجية</p>
                     </div>
-                    {/* <div className="fade-in">
-                        <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">500+</div>
-                        <p className="text-zinc-400 text-sm mt-1">شركة تستخدم المنصة</p>
-                    </div> */}
                     <div className="fade-in">
                         <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">24/7</div>
                         <p className="text-zinc-400 text-sm mt-1">دعم فني متواصل</p>
@@ -314,7 +332,7 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* Features Section with Heroicons */}
+            {/* Features Section - نفس الكود */}
             <section id="features" className="py-16 md:py-24 px-4 md:px-6">
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-12 md:mb-16">
@@ -342,7 +360,7 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* Plan Section */}
+            {/* Plan Section - معدل لجلب الأسعار ديناميكياً */}
             <section id="plans" className="py-16 md:py-24 px-4 md:px-6 bg-gradient-to-b from-zinc-950 to-zinc-900">
                 <div className="max-w-4xl mx-auto">
                     <div className="text-center mb-12">
@@ -353,125 +371,114 @@ export default function LandingPage() {
                         <p className="text-zinc-400 text-lg">باقة واحدة متكاملة تحتوي على جميع المميزات التي تحتاجها</p>
                     </div>
 
-                    {/* Monthly/Yearly Toggle */}
-                    <div className="flex justify-center mb-8">
-                        <div className="inline-flex p-1 bg-zinc-900 border border-zinc-800 rounded-xl">
-                            <button
-                                onClick={() => setType('monthly')}
-                                className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                                    type === 'monthly'
-                                        ? "bg-violet-600 text-white shadow-md shadow-violet-600/10"
-                                        : "text-zinc-400 hover:text-zinc-200"
-                                }`}
-                            >
-                                اشتراك شهري
-                            </button>
-                            <button
-                                onClick={() => setType('yearly')}
-                                className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                                    type === 'yearly'
-                                        ? "bg-violet-600 text-white shadow-md shadow-violet-600/10"
-                                        : "text-zinc-400 hover:text-zinc-200"
-                                }`}
-                            >
-                                اشتراك سنوي
-                                <span className="mr-2 text-xs text-emerald-400 font-normal">
-                                    (وفر 20%)
-                                </span>
-                            </button>
+                    {isLoading ? (
+                        <div className="flex items-center justify-center min-h-[300px]">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500"></div>
+                            <span className="mr-3 text-zinc-400">{t("جاري تحميل الباقات...")}</span>
                         </div>
-                    </div>
-
-                    <div className="bg-gradient-to-b from-zinc-900 to-zinc-950 p-8 rounded-3xl border-2 border-violet-600/60 shadow-2xl shadow-violet-950/30 w-full relative">
-                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                            <span className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg shadow-violet-600/30">
-                                ⭐ الباقة المميزة
-                            </span>
-                        </div>
-
-                        <div className="flex flex-col md:flex-row md:items-start gap-8">
-                            <div className="flex-1">
-                                <div className="p-4 bg-zinc-950/50 rounded-2xl inline-block mb-4 border border-zinc-800">
-                                    {plan.icon}
+                    ) : (
+                        <>
+                            {/* Monthly/Yearly Toggle */}
+                            <div className="flex justify-center mb-8">
+                                <div className="inline-flex p-1 bg-zinc-900 border border-zinc-800 rounded-xl">
+                                    <button
+                                        onClick={() => setType('monthly')}
+                                        className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                                            type === 'monthly'
+                                                ? "bg-violet-600 text-white shadow-md shadow-violet-600/10"
+                                                : "text-zinc-400 hover:text-zinc-200"
+                                        }`}
+                                    >
+                                        اشتراك شهري
+                                    </button>
+                                    <button
+                                        onClick={() => setType('yearly')}
+                                        className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                                            type === 'yearly'
+                                                ? "bg-violet-600 text-white shadow-md shadow-violet-600/10"
+                                                : "text-zinc-400 hover:text-zinc-200"
+                                        }`}
+                                    >
+                                        اشتراك سنوي
+                                        <span className="mr-2 text-xs text-emerald-400 font-normal">
+                                            (وفر 20%)
+                                        </span>
+                                    </button>
                                 </div>
-                                <h3 className="text-2xl font-bold text-white mb-2">{plan.name2}</h3>
-                                <p className="text-zinc-400 text-sm leading-relaxed">{plan.description}</p>
                             </div>
 
-                            <div className="flex-1">
-                                <div className="bg-zinc-950/40 p-4 rounded-xl border border-zinc-800/60 text-center relative">
-                                    <span className="block text-zinc-500 text-xs font-semibold uppercase tracking-wider mb-1">تكلفة الاستثمار</span>
-                                    <p className="text-3xl font-black text-white">
-                                        {getPrice()} {isEgypt ? "ج.م" : "$"} 
-                                        <span className="text-zinc-500 text-sm font-normal"> / {getPriceLabel()}</span>
-                                    </p>
-                                    {type === 'yearly' && (
-                                        <p className="text-sm text-emerald-400 mt-1">💰 وفر 20% عند الاشتراك السنوي</p>
-                                    )}
-                                </div>
-
-                                <Link
-                                    href={route('login')}
-                                    className="w-full block text-center mt-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 py-3.5 rounded-xl font-bold text-white transition-all duration-200 shadow-lg shadow-violet-600/20"
-                                >
-                                    🚀 ابدأ تجربتك المجانية الآن
-                                </Link>
-                            </div>
-                        </div>
-
-                        <div className="border-t border-zinc-800 mt-6 pt-6">
-                            <h4 className="text-sm font-semibold text-zinc-300 mb-4 text-center">جميع المميزات مشمولة في الباقة</h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                                {plan.features.map((feature, i) => (
-                                    <div key={i} className="flex items-start text-sm text-zinc-400">
-                                        <CheckCircleIcon className="h-4 w-4 text-emerald-500 ml-2 mt-0.5 flex-shrink-0" />
-                                        <span>{feature}</span>
+                            {advancedPlan && (
+                                <div className="bg-gradient-to-b from-zinc-900 to-zinc-950 p-8 rounded-3xl border-2 border-violet-600/60 shadow-2xl shadow-violet-950/30 w-full relative">
+                                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                                        <span className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg shadow-violet-600/30">
+                                            ⭐ الباقة المميزة
+                                        </span>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
 
-                    <div className="mt-8 text-center">
-                        <p className="text-zinc-500 text-sm">
-                            💡 {t("فترة تجريبية مجانية لمدة 14 أيام - لا حاجة لبطاقة ائتمان")}
-                        </p>
-                    </div>
+                                    <div className="flex flex-col md:flex-row md:items-start gap-8">
+                                        <div className="flex-1">
+                                            <div className="p-4 bg-zinc-950/50 rounded-2xl inline-block mb-4 border border-zinc-800">
+                                                {plan.icon}
+                                            </div>
+                                            <h3 className="text-2xl font-bold text-white mb-2">{plan.name2}</h3>
+                                            <p className="text-zinc-400 text-sm leading-relaxed">{plan.description}</p>
+                                        </div>
+
+                                        <div className="flex-1">
+                                            <div className="bg-zinc-950/40 p-4 rounded-xl border border-zinc-800/60 text-center relative">
+                                                <span className="block text-zinc-500 text-xs font-semibold uppercase tracking-wider mb-1">تكلفة الاستثمار</span>
+                                                <p className="text-3xl font-black text-white">
+                                                    {getPrice()} {isEgypt ? "ج.م" : "$"} 
+                                                    <span className="text-zinc-500 text-sm font-normal"> / {getPriceLabel()}</span>
+                                                </p>
+                                                {type === 'yearly' && (
+                                                    <p className="text-sm text-emerald-400 mt-1">💰 وفر 20% عند الاشتراك السنوي</p>
+                                                )}
+                                                {/* عرض السعر الأصلي للمقارنة في حالة الاشتراك السنوي */}
+                                                {type === 'yearly' && (
+                                                    <p className="text-xs text-zinc-500 mt-1">
+                                                        <span className="line-through">
+                                                            {isEgypt ? plan.priceInsideEgypt : plan.priceOutsideEgypt} {isEgypt ? "ج.م" : "$"} 
+                                                        </span>
+                                                        <span className="mr-1">شهرياً</span>
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <Link
+                                                href={route('login')}
+                                                className="w-full block text-center mt-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 py-3.5 rounded-xl font-bold text-white transition-all duration-200 shadow-lg shadow-violet-600/20"
+                                            >
+                                                🚀 ابدأ تجربتك المجانية الآن
+                                            </Link>
+                                        </div>
+                                    </div>
+
+                                    <div className="border-t border-zinc-800 mt-6 pt-6">
+                                        <h4 className="text-sm font-semibold text-zinc-300 mb-4 text-center">جميع المميزات مشمولة في الباقة</h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                            {plan.features.map((feature, i) => (
+                                                <div key={i} className="flex items-start text-sm text-zinc-400">
+                                                    <CheckCircleIcon className="h-4 w-4 text-emerald-500 ml-2 mt-0.5 flex-shrink-0" />
+                                                    <span>{feature}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="mt-8 text-center">
+                                <p className="text-zinc-500 text-sm">
+                                    💡 {t("فترة تجريبية مجانية لمدة 14 أيام - لا حاجة لبطاقة ائتمان")}
+                                </p>
+                            </div>
+                        </>
+                    )}
                 </div>
             </section>
 
-            {/* Testimonials Section */}
-            {/* <section className="py-16 md:py-24 px-4 md:px-6">
-                <div className="max-w-4xl mx-auto">
-                    <div className="text-center mb-12">
-                        <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">ماذا يقول عملاؤنا</h2>
-                        <p className="text-zinc-400 text-lg">آراء حقيقية من شركات تستخدم TeamAssign</p>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {testimonials.map((testimonial, index) => (
-                            <div key={index} className="bg-zinc-900/50 backdrop-blur-sm p-6 rounded-2xl border border-zinc-800 fade-in">
-                                <div className="flex items-center gap-1 mb-3">
-                                    {[...Array(5)].map((_, i) => (
-                                        <StarIcon key={i} className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                                    ))}
-                                </div>
-                                <p className="text-zinc-300 text-sm leading-relaxed">"{testimonial.text}"</p>
-                                <div className="mt-4 flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 flex items-center justify-center text-white font-bold">
-                                        {testimonial.author.charAt(0)}
-                                    </div>
-                                    <div>
-                                        <p className="text-white font-semibold text-sm">{testimonial.author}</p>
-                                        <p className="text-zinc-500 text-xs">{testimonial.position}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section> */}
-
-            {/* FAQ Section */}
+            {/* FAQ Section - نفس الكود */}
             <section id="faq" className="py-16 md:py-24 px-4 md:px-6 bg-zinc-900/30">
                 <div className="max-w-4xl mx-auto">
                     <div className="text-center mb-12">
@@ -500,7 +507,6 @@ export default function LandingPage() {
             <section className="py-16 md:py-24 px-4 md:px-6 bg-gradient-to-r from-violet-900/20 via-indigo-900/20 to-violet-900/20">
                 <div className="max-w-3xl mx-auto text-center">
                     <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">جاهز لتنظيم فرقك وزيادة إنتاجيتك؟</h2>
-                    {/* <p className="text-zinc-400 text-lg mb-8">انضم إلى أكثر من 500 شركة تستخدم TeamAssign يومياً</p> */}
                     <Link
                         href={route('login')}
                         className="inline-block bg-gradient-to-r from-violet-600 to-indigo-600 px-8 py-4 rounded-xl text-lg font-semibold text-white hover:from-violet-700 hover:to-indigo-700 transition-all shadow-lg shadow-violet-600/30 hover:shadow-violet-600/50 transform hover:scale-[1.02] duration-200"
@@ -684,19 +690,6 @@ const features = [
     { icon: TrophyIcon, title: "لوحة الشرف والتحفيز", description: "حفز فريقك من خلال نظام نقاط وتقييم ومكافآت للأداء المتميز." },
     { icon: MegaphoneIcon, title: "إشعارات وتنبيهات ذكية", description: "تنبيهات فورية للمهام المستحقة والفعاليات والتحديثات المهمة." },
     { icon: ShieldCheckIcon, title: "أمان وحماية متقدمة", description: "نظام صلاحيات متكامل مع تشفير البيانات وحماية الخصوصية." }
-];
-
-const testimonials = [
-    {
-        text: "TeamAssign ساعدنا ننظم كل عملياتنا الداخلية. الفريق بقى منظم أكتر وإنتاجيتنا زادت بشكل ملحوظ!",
-        author: "أحمد السيد",
-        position: "مدير عام، شركة التقنية الحديثة"
-    },
-    {
-        text: "المنصة سهلة جداً في الاستخدام وفريق الدعم متعاون. أوصي بها لأي شركة تبحث عن تنظيم عملها.",
-        author: "نورة خالد",
-        position: "مديرة الموارد البشرية، شركة الريادة"
-    }
 ];
 
 const faqs = [

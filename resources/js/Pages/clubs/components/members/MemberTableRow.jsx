@@ -66,12 +66,14 @@ export default function MemberTableRow({
                 {renderRatingStars(member.rating)}
             </td>
             <td className="px-3 py-3 text-right">
+                {member.role != 'admin' && (
                 <button
                     onClick={() => onViewPermissions(member)}
                     className="px-3 py-1 bg-primary text-white rounded-lg hover:bg-primary-dark text-xs transition-colors"
                 >
                     {t("عرض الصلاحيات")}
                 </button>
+                )}
             </td>
             <td className="px-3 py-3 text-center">
                 <div className="flex items-center justify-center gap-1.5 flex-wrap">

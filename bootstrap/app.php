@@ -36,7 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 Request::HEADER_X_FORWARDED_AWS_ELB
         );
     })->withSchedule(function (Illuminate\Console\Scheduling\Schedule $schedule) {
-        $schedule->command('app:task-commands')->everyMinute();
+        $schedule->command('app:task-commands')->daily();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
